@@ -1271,7 +1271,8 @@ final class NotesModel {
         let deadline = ContinuousClock.now.advanced(by: timeout)
         while operationJobID != nil || workflowJobID != nil {
             guard !Task.isCancelled, ContinuousClock.now < deadline else { terminating = false; return false }
-            do { try await Task.sleep(until: min(deadline, .now.advanced(by: .milliseconds(50))), clock: .continuous) }
+            let nextCheck = min(deadline, ContinuousClock.now.advanced(by: .milliseconds(50)))
+            do { try await Task.sleep(until: nextCheck, clock: .continuous) }
             catch { terminating = false; return false }
         }
         guard await finishCapture(), await save() else { terminating = false; return false }

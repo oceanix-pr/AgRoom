@@ -22,21 +22,16 @@ struct MailSignatureImportView: View {
             Text(L.string("mail.signature.import")).font(.headline)
             Text(account.emailAddress).foregroundStyle(.secondary)
             Text(L.string("mail.signature.webmailHint")).font(.callout)
-            Picker(L.string("mail.signature.folder"), selection: $folderPath) {
+            Picker(L.string("mail.signature.folder"), selection: Binding(get: { folderPath }, set: { selectFolder($0) })) {
                 ForEach(folders, id: \.path) { folder in Text(folder.name).tag(folder.path) }
             }.disabled(folders.isEmpty)
-            .onChange(of: folderPath) { selectFolder(folderPath) }
-            Picker(L.string("mail.signature.message"), selection: $sourceID) {
+            Picker(L.string("mail.signature.message"), selection: Binding(get: { sourceID }, set: { selectSource($0) })) {
                 Text(L.string("mail.signature.chooseMessage")).tag(nil as UInt32?)
                 ForEach(sources) { source in
                     Text([source.date.map { AppDate.string(from: $0) }, source.subject.isEmpty ? L.string("mail.noSubject") : source.subject]
                         .compactMap { $0 }.joined(separator: " · ")).tag(Optional(source.id))
                 }
             }.disabled(sources.isEmpty)
-            .onChange(of: sourceID) {
-                // Changing folders clears the source list and starts its own read.
-                if !sources.isEmpty { loadPreview(for: sourceID) }
-            }
             if let preview {
                 Text(L.string("mail.signature.selectText")).font(.callout)
                 SignatureSelectionView(preview: preview, selection: $selection)
@@ -64,7 +59,7 @@ struct MailSignatureImportView: View {
     }
 
     private func loadFolders() {
-        folders = []; sources = []; sourceID = nil
+        folders = []; folderPath = ""; sources = []; sourceID = nil
         read { service in
             let values = try await service.signatureFolders(account: account).sorted {
                 if $0.role != $1.role { return $0.role == .sent }
@@ -72,18 +67,13 @@ struct MailSignatureImportView: View {
             }
             try Task.checkCancellation()
             folders = values
-            guard let first = values.first else { folderPath = ""; return }
-            if folderPath == first.path {
-                try await loadSources(first, service: service)
-            } else {
-                folderPath = first.path
-            }
+            if let first = values.first { folderPath = first.path; try await loadSources(first, service: service) }
         }
     }
 
     private func selectFolder(_ path: String) {
         guard let folder = folders.first(where: { $0.path == path }) else { return }
-        sources = []; sourceID = nil
+        folderPath = path; sources = []; sourceID = nil
         read { service in try await loadSources(folder, service: service) }
     }
 
@@ -93,7 +83,8 @@ struct MailSignatureImportView: View {
         sources = result
     }
 
-    private func loadPreview(for id: UInt32?) {
+    private func selectSource(_ id: UInt32?) {
+        sourceID = id
         read { service in
             guard let source = sources.first(where: { $0.id == id }) else { return }
             let value = try await service.signaturePreview(from: source)

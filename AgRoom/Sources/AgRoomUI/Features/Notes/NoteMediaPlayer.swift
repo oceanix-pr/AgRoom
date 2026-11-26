@@ -26,7 +26,8 @@ struct NoteMediaPlayer: View {
                 }.frame(height: 48).accessibilityLabel(L.string("notes.waveform"))
             }
             if duration > 0 {
-                Slider(value: Binding(get: { min(duration,max(0,model.playbackTime)) },set: model.seek),in: 0...duration).accessibilityLabel(L.string("notes.transcript.seek"))
+                Slider(value: Binding(get: { min(duration, max(0, model.playbackTime)) }, set: { model.seek($0) }), in: 0...duration)
+                    .accessibilityLabel(L.string("notes.transcript.seek"))
                 HStack { Text(Duration.seconds(model.playbackTime).formatted(.time(pattern: .hourMinuteSecond))); Spacer(); Text(Duration.seconds(duration).formatted(.time(pattern: .hourMinuteSecond))) }.font(.caption).monospacedDigit().foregroundStyle(.secondary)
             }
         }.task(id: ObjectIdentifier(player)) {
