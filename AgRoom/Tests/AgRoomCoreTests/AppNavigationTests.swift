@@ -207,7 +207,7 @@ struct SidebarNavigationHostTests {
         }
     }
 
-    @Observable final class State {
+    @Observable final class SidebarState {
         var visibility: NavigationSplitViewVisibility = .all
         var selection: HubNavItem = .chat
     }
@@ -380,7 +380,7 @@ struct SidebarNavigationHostTests {
     }
 
     private struct Host: View {
-        let state: State
+        let state: SidebarState
         let views: Views
         let store: SpaceStore
         var reduceMotion = false
@@ -404,7 +404,7 @@ struct SidebarNavigationHostTests {
 
     @Test("Sidebar transitions continuously while retaining detail, draft and toolbar", arguments: [false, true])
     func toolbarCollapsePreservesNavigationAndDetail(reduceMotion: Bool) async throws {
-        let state = State(), views = Views()
+        let state = SidebarState(), views = Views()
         let store = SpaceStore(space: .work, databaseQueue: try DatabaseQueue())
         let host = NSHostingController(rootView: Host(state: state, views: views, store: store, reduceMotion: reduceMotion))
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1120, height: 640),
@@ -494,7 +494,7 @@ struct SidebarNavigationHostTests {
         }
     }
 
-    private func triggerSidebarVisibilityAction(in window: NSWindow, state: State) throws {
+    private func triggerSidebarVisibilityAction(in window: NSWindow, state: SidebarState) throws {
         try expectSingleSidebarButton(in: window)
         SidebarVisibilityAction.toggle(Binding(get: { state.visibility }, set: { state.visibility = $0 }))
     }

@@ -671,14 +671,19 @@ struct UsageDashboardRenderingTests {
         let queue = try DatabaseQueue(); try DatabaseBootstrap.prepareSpace(queue)
         let service = UsageService(databaseQueue: queue)
         let now = Date(), provider = UUID().uuidString
-        try await service.importRecords((0..<6).map { index in
-            ProviderUsageRecord(id: "preview-\(index)", sessionID: nil, providerID: provider, providerName: "Synthetic provider",
-                requestedModel: index < 2 ? "deepseek-flash" : "synthetic-model", source: "chat", startedAt: now.addingTimeInterval(Double(-index * 86400)),
-                finishedAt: now.addingTimeInterval(Double(-index * 86400) + 1.2),
-                status: index == 4 ? "failed" : (index == 5 ? "cancelled" : "succeeded"),
-                usage: index >= 4 ? .init() : .init(input: 12500, output: 1500, cacheRead: index == 0 ? 4000 : nil,
-                    cacheWrite: nil, reportedModel: index < 2 ? "deepseek-flash" : nil))
-        })
+        let statuses = ["succeeded", "succeeded", "succeeded", "succeeded", "failed", "cancelled"]
+        let fixtures: [ProviderUsageRecord] = statuses.enumerated().map { index, status in
+            let offset = TimeInterval(-index * 86_400)
+            let model = index < 2 ? "deepseek-flash" : "synthetic-model"
+            let usage = status == "succeeded"
+                ? ProviderTokenUsage(input: 12_500, output: 1_500, cacheRead: index == 0 ? 4_000 : nil,
+                                     reportedModel: index < 2 ? model : nil)
+                : ProviderTokenUsage()
+            return ProviderUsageRecord(id: "preview-\(index)", sessionID: nil, providerID: provider, providerName: "Synthetic provider",
+                requestedModel: model, source: "chat", startedAt: now.addingTimeInterval(offset),
+                finishedAt: now.addingTimeInterval(offset + 1.2), status: status, usage: usage)
+        }
+        try await service.importRecords(fixtures)
         let stats = try await service.getStats(), records = try await service.getRecords()
         let oldLanguage = LanguageManager.shared.currentLanguage
         let oldLarge = InterfaceTypographyPreferences.shared.isLarge
