@@ -432,8 +432,11 @@ public struct KnowledgeView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(relations) { edge in
+                                let from = graph.nodes.first { $0.id == edge.from }?.label ?? ""
+                                let to = graph.nodes.first { $0.id == edge.to }?.label ?? ""
+                                let relation = [from, edge.label ?? "", to].joined(separator: " → ")
                                 Button { graphEvidence = edge } label: {
-                                    Text((graph.nodes.first(where: { $0.id == edge.from })?.label ?? "") + " → " + (edge.label ?? "") + " → " + (graph.nodes.first(where: { $0.id == edge.to })?.label ?? ""))
+                                    Text(relation)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }.buttonStyle(.link)
                             }

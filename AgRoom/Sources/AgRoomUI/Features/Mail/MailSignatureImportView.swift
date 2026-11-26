@@ -25,13 +25,17 @@ struct MailSignatureImportView: View {
             Picker(L.string("mail.signature.folder"), selection: Binding(get: { folderPath }, set: selectFolder)) {
                 ForEach(folders, id: \.path) { folder in Text(folder.name).tag(folder.path) }
             }.disabled(folders.isEmpty)
-            Picker(L.string("mail.signature.message"), selection: Binding(get: { sourceID }, set: selectSource)) {
+            Picker(L.string("mail.signature.message"), selection: $sourceID) {
                 Text(L.string("mail.signature.chooseMessage")).tag(nil as UInt32?)
                 ForEach(sources) { source in
                     Text([source.date.map { AppDate.string(from: $0) }, source.subject.isEmpty ? L.string("mail.noSubject") : source.subject]
                         .compactMap { $0 }.joined(separator: " · ")).tag(Optional(source.id))
                 }
             }.disabled(sources.isEmpty)
+            .onChange(of: sourceID) {
+                // Changing folders clears the source list and starts its own read.
+                if !sources.isEmpty { loadPreview(for: sourceID) }
+            }
             if let preview {
                 Text(L.string("mail.signature.selectText")).font(.callout)
                 SignatureSelectionView(preview: preview, selection: $selection)
@@ -83,8 +87,7 @@ struct MailSignatureImportView: View {
         sources = result
     }
 
-    private func selectSource(_ id: UInt32?) {
-        sourceID = id
+    private func loadPreview(for id: UInt32?) {
         read { service in
             guard let source = sources.first(where: { $0.id == id }) else { return }
             let value = try await service.signaturePreview(from: source)

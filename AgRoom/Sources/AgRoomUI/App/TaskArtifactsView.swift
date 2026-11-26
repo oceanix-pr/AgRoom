@@ -335,7 +335,7 @@ struct TaskArtifactsView: View {
             }
         }.buttonStyle(.borderedProminent)
         let preview = Button(L.string("product.artifact.preview")) { perform(artifact) { showPreview($0, artifact: artifact) } }
-        let export = Button(L.string("product.artifact.export")) { perform(artifact) { export($0, artifact: artifact) } }
+        let exportButton = Button(L.string("product.artifact.export")) { perform(artifact) { export($0, artifact: artifact) } }
         let continueEditing = Button(L.string("product.artifact.continue")) {
             perform(artifact) { url in
                 onUse(artifact)
@@ -363,13 +363,13 @@ struct TaskArtifactsView: View {
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: MeetSpacing.sm) {
                 if artifact.versionID != nil, store != nil { diff }
-                if readable { preview; export; continueEditing }
+                if readable { preview; exportButton; continueEditing }
                 more
             }.fixedSize()
             VStack(alignment: .leading, spacing: MeetSpacing.sm) {
                 HStack(spacing: MeetSpacing.sm) {
                     if artifact.versionID != nil, store != nil { diff }
-                    if readable { preview; export }
+                    if readable { preview; exportButton }
                     more
                 }
                 if readable { continueEditing }
