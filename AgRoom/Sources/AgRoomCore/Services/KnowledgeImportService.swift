@@ -55,8 +55,8 @@ public final class KnowledgeImportService: Sendable {
     public func prepare(url: URL, options: KnowledgeImportOptions = .init(), sourceID: UUID? = nil,
                         considering previews: [KnowledgeImportPreview] = []) async throws -> KnowledgeImportPreview {
         try Task.checkCancellation()
+        let space = self.space
         guard previews.allSatisfy({ $0.space == space }) else { throw KnowledgeImportError.permission }
-        let space = space
         let extract = extract
         let job = Task.detached {
             let snapshot = try KnowledgeSourceFile.read(url, space: space)
