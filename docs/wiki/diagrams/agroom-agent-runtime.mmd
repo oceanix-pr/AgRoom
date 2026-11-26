@@ -1,0 +1,67 @@
+%% Agent 的当前运行结构。普通委派与 team_run 是两条装配路径。
+%% 实现依据：AgentModel.swift、EngineAssembly.swift、DispatcherTools.swift（AgentTool）、
+%% DispatcherEngine.swift、AgentProviderResolver.swift、ExecutionContext.swift。
+flowchart TB
+    Config["空间内 Agent 配置<br/>name / description / systemPrompt / 人设<br/>providerID / modelName / knowledgeEnabled<br/>skillNames / isEnabled"]
+    Factory["EngineAssembly → DispatcherToolFactory<br/>每个启用智体注册一个 AgentTool<br/>agent_ + ASCII slug；参数 message / context<br/>挂载技能名为空：不限制；非空：按名筛选"]
+    Config --> Factory
+
+    subgraph PARENT["主调度：一个 DispatcherEngine 实例"]
+        MainModel["主模型<br/>看到主会话历史、用户请求、工具定义与智体 description<br/>选择直接调用工具，或调用 agent_*"]
+        ParentGuard["主引擎执行边界<br/>工具 / 参数 / 权限 / 范围 / 预算检查<br/>委派入口本身无需确认，内部操作仍按策略检查"]
+        Pending["宿主挂起与恢复<br/>ToolSuspensionError → 真实内层请求 / 参数 / approvalID<br/>审核或用户决定 → 恢复同一个子引擎<br/>可以再次挂起，逐项链式恢复"]
+        Final["主模型继续综合<br/>按原 toolCallId 收到工具结果<br/>ChatView 展示主 / 子轨迹<br/>SessionService 保存发起空间的消息与任务记录"]
+        MainModel --> ParentGuard
+        Final --> MainModel
+    end
+    Factory --> MainModel
+
+    subgraph INVOCATION["AgentTool.execute：每次委派独立构造"]
+        Input["委派输入<br/>必填 message + 可选 context<br/>history: []，不继承主会话历史<br/>knowledgeEnabled 控制自动附带相关 Top-3 知识摘要"]
+        Prompt["子系统提示<br/>agent.systemPrompt + personaPromptFragment<br/>父权限 + RunResourceContext 范围<br/>挂载技能与项目知识范围继续收窄"]
+        Resolver["AgentProviderResolver<br/>providerID 为空：继承主 Provider<br/>modelName 为空：所选 Provider 默认模型<br/>指定配置失效则明确失败，不自动改用其他配置"]
+        Child["嵌套 DispatcherEngine · 新实例<br/>新 runID + parentRunID + subtaskID<br/>独立历史 / 局部 subagentMaxSteps<br/>run(userMessage, history: [])"]
+        Input --> Child
+        Prompt --> Child
+        Resolver --> Child
+    end
+    ParentGuard --> Input
+
+    subgraph LOOP["子引擎内部的模型 / 工具循环"]
+        Request["预算预留 → CloudProvider → 子模型<br/>SSE 正文 / 思考 / 工具调用 → usage 结算"]
+        Guard["工具执行前核验<br/>已注册工具、参数、权限、任务与技能范围<br/>确定性规则 / 精确授权 / 审核 / 人工确认"]
+        Result["执行已获准的工具<br/>产生 toolResult / 轨迹 / 产物回执<br/>按 toolCallId 配对"]
+        Done["finished<br/>子模型正文 + 工具步骤摘要<br/>异常由父执行器转换为工具失败结果"]
+        Child --> Request
+        Request -->|"有工具调用"| Guard
+        Guard -->|"允许执行"| Result
+        Result -->|"回填结果，继续下一 Step"| Request
+        Request -->|"无工具调用 / 引擎收尾"| Done
+    end
+    Guard -. "需要确认：透传内层真实请求" .-> Pending
+    Pending -. "批准 / 拒绝后 resume；执行前重验" .-> Guard
+    Done --> Final
+
+    Tools["当前子工具面（由 makeNestedTools 构造）<br/>current_time / memory_search / knowledge_search / web_fetch<br/>reminders_list<br/>宿主允许时：ocr_recognize / transcribe_audio<br/>挂载技能：skill_load / skill_search / skill_file / skill_run_script<br/>最后再按宿主能力与项目资源范围过滤"]
+    Result <--> Tools
+    Restricted["子工具面未注册<br/>通用文件读写 / Shell / 邮箱写 / 浏览器 / MCP<br/>agent_* / team_run：无递归委派入口<br/>技能脚本仍可能产生受控副作用，遵守原审批与沙盒"]
+    Tools --- Restricted
+
+    Shared["父子共享 / 继承的边界<br/>同一 space / session；工作区与任务范围 / deadline 继承<br/>共享 ExecutionBudgetLedger：Token 与工具调用计数<br/>共享 RoundAuthorizationStore；硬确认仍逐次<br/>进度 relay 把 agent_* > tool 的轨迹传回主引擎"]
+    Shared -.-> ParentGuard
+    Shared -.-> Child
+    Caveat["当前恢复边界<br/>运行中的挂起可恢复原内存子引擎<br/>子运行检查点随父记录保存，可补齐已完成的委派<br/>退出交接仅在完整工具批边界；未知内部效果转人工核实"]
+    Child --- Caveat
+
+    %% knowledgeEnabled 只控制自动 Top-3 注入；knowledge_search 仍按服务和项目范围注册。
+    %% chainSuspension 协议可透传 waitingForInput；当前 makeNestedTools 没有注册 ask_user，
+    %% 因此此图不把主动向用户提问画成普通子智体的常规可调用工具。
+    %% 技能 allowed-tools 与已有工具面取交集，不为子智体授予新的能力。
+    %% team_run 的预算是 TeamCoordinator 新建的团队账本，不直接复用主对话账本。
+
+    classDef parent fill:#edf4ff,stroke:#9bb7df,color:#23436d;
+    classDef child fill:#eaf5f0,stroke:#8cbaa7,color:#285d4c;
+    classDef boundary fill:#fff5df,stroke:#d8b978,color:#735924;
+    class MainModel,ParentGuard,Pending,Final parent;
+    class Child,Request,Guard,Result,Done child;
+    class Shared,Restricted,Caveat boundary;

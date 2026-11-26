@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1980" viewBox="0 0 2000 1980" role="img" aria-labelledby="title desc">
+<title id="title">Agent 如何运作</title>
+<desc id="desc">配置 → 注册为工具 → 主模型委派 → 独立子引擎闭环 → 返回主调度</desc>
+<rect width="2000" height="1980" fill="#f7f9fc"/>
+<text x="64" y="84.75999999999999" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="48" font-weight="600" fill="#24354a">Agent 如何运作</text>
+<text x="64" y="132.01" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="23" font-weight="400" fill="#63738a">配置 → 注册为工具 → 主模型委派 → 独立子引擎闭环 → 返回主调度</text>
+<text x="64" y="171.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="600" fill="#527baa">普通智体委派 · agent_*</text>
+<text x="1934" y="171.79" text-anchor="end" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#63738a">实线：调用 / 返回　　虚线：审批透传</text>
+<rect x="64" y="500" width="555" height="1010" rx="20" fill="#edf3fc" stroke="#bfd0e7" stroke-width="1.4"/>
+<text x="94" y="545.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">主调度 DispatcherEngine</text>
+<rect x="719" y="500" width="1215" height="310" rx="20" fill="#ffffff" stroke="#bbcddd" stroke-width="1.4"/>
+<text x="745" y="550.36" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="28" font-weight="600" fill="#24354a">④ AgentTool.execute：构造此次子任务</text>
+<rect x="719" y="885" width="665" height="390" rx="20" fill="#eaf5f0" stroke="#98bda9" stroke-width="1.4"/>
+<text x="745" y="935.36" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="28" font-weight="600" fill="#285d4c">⑤ 新建嵌套 DispatcherEngine</text>
+<text x="745" y="975.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">独立历史 / 局部 Step 上限 · 新 runID 与父运行关联</text>
+<rect x="1444" y="885" width="490" height="625" rx="20" fill="#ffffff" stroke="#bdcddd" stroke-width="1.4"/>
+<text x="1468" y="935.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">子引擎实际工具面</text>
+<polyline points="619,295 719,295" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="719.00,295.00 709.00,290.50 709.00,299.50" fill="#527baa"/>
+<polyline points="1274,295 1374,295" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1374.00,295.00 1364.00,290.50 1364.00,299.50" fill="#527baa"/>
+<polyline points="1654,400 1654,452 575,452 575,575" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="575.00,575.00 579.50,565.00 570.50,565.00" fill="#527baa"/>
+<polyline points="341,730 341,785" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="341.00,785.00 345.50,775.00 336.50,775.00" fill="#527baa"/>
+<polyline points="589,867 658,867 658,655 719,655" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="719.00,655.00 709.00,650.50 709.00,659.50" fill="#527baa"/>
+<rect x="623.75" y="622" width="68.5" height="26" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="658" y="638.92" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">agent_*</text>
+<polyline points="1051,810 1051,885" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1051.00,885.00 1055.50,875.00 1046.50,875.00" fill="#527baa"/>
+<rect x="929.5" y="834" width="243.0" height="28" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="1051" y="852.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">run(userMessage, history: [])</text>
+<polyline points="1015,1056 1089,1056" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1089.00,1056.00 1079.00,1051.50 1079.00,1060.50" fill="#527baa"/>
+<polyline points="1221,1097 1221,1167" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1221.00,1167.00 1225.50,1157.00 1216.50,1157.00" fill="#527baa"/>
+<polyline points="749,1207 734,1207 734,1056 749,1056" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="749.00,1056.00 739.00,1051.50 739.00,1060.50" fill="#527baa"/>
+<polyline points="1384,1207 1444,1207" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1444.00,1207.00 1434.00,1202.50 1434.00,1211.50" fill="#527baa"/>
+<polygon points="1384.00,1207.00 1394.00,1211.50 1394.00,1202.50" fill="#527baa"/>
+<polyline points="719,1128 589,1128" fill="none" stroke="#9372b6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<polygon points="589.00,1128.00 599.00,1132.50 599.00,1123.50" fill="#9372b6"/>
+<polygon points="719.00,1128.00 709.00,1123.50 709.00,1132.50" fill="#9372b6"/>
+<rect x="612.0" y="1087" width="82.0" height="27" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="653" y="1104.79" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#9372b6">内层审批</text>
+<polyline points="1051,1275 1051,1360" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1051.00,1360.00 1055.50,1350.00 1046.50,1350.00" fill="#527baa"/>
+<rect x="969.5" y="1303" width="163.0" height="28" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="1051" y="1321.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">finished / 异常结果</text>
+<polyline points="719,1435 653,1435 653,1407 589,1407" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="589.00,1407.00 599.00,1411.50 599.00,1402.50" fill="#527baa"/>
+<polyline points="94,1407 79,1407 79,652 94,652" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="94.00,652.00 84.00,647.50 84.00,656.50" fill="#527baa"/>
+<rect x="64" y="193" width="555" height="210" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="64" y="190" width="555" height="210" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="65" y="212" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="87" y="236.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">① Agent 配置 · 空间内数据</text>
+<text x="87" y="287.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">name / description / systemPrompt / 人设</text>
+<text x="87" y="321.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">providerID / modelName / knowledgeEnabled</text>
+<text x="87" y="355.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">skillNames / isEnabled</text>
+<rect x="719" y="193" width="555" height="210" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="719" y="190" width="555" height="210" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="720" y="212" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="742" y="236.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">② 本轮装配与工具注册</text>
+<text x="742" y="287.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">EngineAssembly → DispatcherToolFactory</text>
+<text x="742" y="321.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">每个启用智体 → 一个 AgentTool</text>
+<text x="742" y="355.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">工具名 agent_&lt;ASCII slug&gt;；message / context</text>
+<rect x="1374" y="193" width="560" height="210" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="1374" y="190" width="560" height="210" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="1375" y="212" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="1397" y="236.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">③ 暴露给主模型</text>
+<text x="1397" y="287.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">工具定义里包含智体 description</text>
+<text x="1397" y="321.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">主模型据任务选择直接用工具或委派</text>
+<text x="1397" y="355.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">调用 agent_* 时，准备自包含的子任务说明</text>
+<rect x="94" y="578" width="495" height="155" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="94" y="575" width="495" height="155" rx="17" fill="#ffffff" stroke="#b1c6e2" stroke-width="1.4"/>
+<rect x="95" y="597" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="117" y="620.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">主 CloudProvider / LLM</text>
+<text x="117" y="664.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">读取用户请求、主会话历史与工具定义</text>
+<text x="117" y="695.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">返回 agent_* { message, context }</text>
+<rect x="94" y="788" width="495" height="165" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="94" y="785" width="495" height="165" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="95" y="807" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="117" y="830.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">父执行边界</text>
+<text x="117" y="866.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">参数 / 工具存在性 / 权限 / 范围 / 预算</text>
+<text x="117" y="895.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">委派入口本身无需确认</text>
+<text x="117" y="924.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">内部工具仍遵守原确认与执行策略</text>
+<rect x="94" y="1043" width="495" height="185" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="94" y="1040" width="495" height="185" rx="17" fill="#f7f1fc" stroke="#cdb9e0" stroke-width="1.4"/>
+<rect x="95" y="1062" width="4" height="30" rx="2" fill="#9372b6" stroke="none" stroke-width="0"/>
+<text x="117" y="1085.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">运行中的挂起与恢复</text>
+<text x="117" y="1118.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">子工具挂起 → ToolSuspensionError</text>
+<text x="117" y="1146.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">真实内层参数 / approvalID 传给宿主</text>
+<text x="117" y="1174.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">审核或用户决定 → resume 同一个子引擎</text>
+<text x="117" y="1202.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">可以再次挂起，逐项链式恢复</text>
+<rect x="94" y="1333" width="495" height="155" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="94" y="1330" width="495" height="155" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="95" y="1352" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="117" y="1373.88" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="24" font-weight="600" fill="#24354a">回填父结果 → 主模型继续综合</text>
+<text x="117" y="1420.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">按原 toolCallId 接收子结果；继续主回合</text>
+<text x="117" y="1451.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">ChatView 展示，SessionService 原空间落盘</text>
+<polyline points="1120,584 1120,779" fill="none" stroke="#dce4ed" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1515,584 1515,779" fill="none" stroke="#dce4ed" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="745" y="604.14" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" font-weight="600" fill="#24354a">委派输入</text>
+<text x="745" y="647.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">message 必填 / context 可选</text>
+<text x="745" y="679.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">history: []，看不到主会话历史</text>
+<text x="745" y="711.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">知识开关控制自动附带的</text>
+<text x="745" y="743.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">相关 Top-3 知识摘要</text>
+<text x="1140" y="604.14" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" font-weight="600" fill="#24354a">提示与资源范围</text>
+<text x="1140" y="647.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">systemPrompt + 人设 / 说话风格</text>
+<text x="1140" y="679.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">父权限 + 项目 / 知识范围</text>
+<text x="1140" y="711.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">挂载技能：空列表不限制</text>
+<text x="1140" y="743.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">非空列表按技能名过滤</text>
+<text x="1535" y="604.14" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" font-weight="600" fill="#24354a">Provider 与模型解析</text>
+<text x="1535" y="647.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">providerID 空：继承主 Provider</text>
+<text x="1535" y="679.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">modelName 空：所选默认模型</text>
+<text x="1535" y="711.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">指定配置失效：明确失败</text>
+<text x="1535" y="743.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">用量沿用发起空间记录器</text>
+<text x="745" y="1002.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#63738a">在宿主进程内运行；每次委派独立实例</text>
+<rect x="749" y="1015" width="266" height="82" rx="12" fill="#ffffff" stroke="#a9c3b7" stroke-width="1.4"/>
+<text x="882.0" y="1052.14" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" font-weight="600" fill="#285d4c">预算 → 子模型</text>
+<text x="882.0" y="1079.355" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16.5" font-weight="400" fill="#63738a">CloudProvider / SSE</text>
+<rect x="1089" y="1015" width="265" height="82" rx="12" fill="#ffffff" stroke="#a9c3b7" stroke-width="1.4"/>
+<text x="1221.5" y="1052.14" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" font-weight="600" fill="#285d4c">检查 / 审核 / 确认</text>
+<text x="1221.5" y="1079.355" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16.5" font-weight="400" fill="#63738a">允许后才执行工具</text>
+<rect x="749" y="1167" width="605" height="80" rx="12" fill="#ffffff" stroke="#a9c3b7" stroke-width="1.4"/>
+<text x="1051.5" y="1204.14" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" font-weight="600" fill="#285d4c">受限工具执行 → toolResult → 下一模型轮</text>
+<text x="1051.5" y="1231.355" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16.5" font-weight="400" fill="#63738a">按 toolCallId 配对；usage 计入共享账本</text>
+<rect x="719" y="1363" width="665" height="150" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="719" y="1360" width="665" height="150" rx="17" fill="#ffffff" stroke="#a6bfb2" stroke-width="1.4"/>
+<rect x="720" y="1382" width="4" height="30" rx="2" fill="#2d8b87" stroke="none" stroke-width="0"/>
+<text x="742" y="1406.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">⑥ 子任务结果返回</text>
+<text x="742" y="1449.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#63738a">子模型正文 + 工具步骤摘要</text>
+<text x="742" y="1482.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#63738a">异常由父执行器转为工具失败结果，交回主模型</text>
+<text x="1468" y="989.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="600" fill="#2d8b87">内置只读面</text>
+<text x="1468" y="1026.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">current_time / web_fetch</text>
+<text x="1468" y="1056.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">memory_search / knowledge_search</text>
+<text x="1468" y="1086.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">reminders_list</text>
+<polyline points="1468,1120 1910,1120" fill="none" stroke="#dce4ed" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1468" y="1161.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="600" fill="#2d8b87">条件能力</text>
+<text x="1468" y="1197.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">OCR / 转写：宿主能力允许时提供</text>
+<text x="1468" y="1227.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">挂载技能：load / search / file / run_script</text>
+<text x="1468" y="1257.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">脚本依然需要原策略审核 / 确认</text>
+<text x="1468" y="1287.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">skill_load 后按 allowed-tools 收窄工具面</text>
+<polyline points="1468,1310 1910,1310" fill="none" stroke="#dce4ed" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1468" y="1351.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="600" fill="#735924">当前子工具面未注册</text>
+<text x="1468" y="1387.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">通用文件读写 / Shell / 邮箱写 / 浏览器</text>
+<text x="1468" y="1416.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">MCP / agent_* / team_run（无递归委派）</text>
+<text x="1468" y="1445.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">knowledgeEnabled 只控制自动知识注入；</text>
+<text x="1468" y="1474.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">知识检索仍按服务与项目范围注册。</text>
+<text x="64" y="1575.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#24354a">父子之间共享什么，什么保持独立</text>
+<rect x="64" y="1611" width="590" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="64" y="1608" width="590" height="190" rx="17" fill="#eef3f8" stroke="#ccd8e5" stroke-width="1.4"/>
+<rect x="65" y="1630" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="87" y="1652.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#24354a">身份与资源边界</text>
+<text x="87" y="1696.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">子 runID 新建；关联 parentRunID / subtaskID</text>
+<text x="87" y="1728.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">space / session / 工作区 / 知识范围继承</text>
+<text x="87" y="1760.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">父权限是上限；宿主能力只会继续收窄</text>
+<rect x="704" y="1611" width="590" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="704" y="1608" width="590" height="190" rx="17" fill="#eef3f8" stroke="#ccd8e5" stroke-width="1.4"/>
+<rect x="705" y="1630" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="727" y="1652.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#24354a">预算与取消</text>
+<text x="727" y="1696.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">子 maxSteps 独立配置</text>
+<text x="727" y="1728.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">Token / 工具调用共享 ExecutionBudgetLedger</text>
+<text x="727" y="1760.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">deadline 继承；任务取消向内层传递</text>
+<rect x="1344" y="1611" width="590" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="1344" y="1608" width="590" height="190" rx="17" fill="#eef3f8" stroke="#ccd8e5" stroke-width="1.4"/>
+<rect x="1345" y="1630" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="1367" y="1652.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#24354a">授权与轨迹</text>
+<text x="1367" y="1696.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">共享 RoundAuthorizationStore</text>
+<text x="1367" y="1728.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">硬确认仍逐次；批准绑定真实内层调用</text>
+<text x="1367" y="1760.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">子轨迹带 agent_* &gt; tool 前缀返回宿主</text>
+<rect x="64" y="1840" width="1870" height="66" rx="12" fill="#fff5df" stroke="#e0c895" stroke-width="1.4"/>
+<text x="87" y="1877.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#735924">当前恢复边界：已完成的单个委派可补回结果。退出交接仅允许完整工具批边界，未知内部效果转人工核实。</text>
+<text x="64" y="1953.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">源码依据：AgentModel · EngineAssembly · DispatcherTools / AgentTool · DispatcherEngine · AgentProviderResolver · ExecutionContext</text>
+</svg>

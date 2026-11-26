@@ -1,0 +1,32 @@
+name: macOS tests
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: AgRoom
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Check toolchain and shared files
+        run: |
+          xcodebuild -version
+          swift --version
+          cmp Package.resolved AgRoom.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          cmp ../LICENSE Sources/AgRoom/Notices/AgRoom-MIT.txt
+      - name: Resolve locked packages for system SQLite
+        env:
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: submodule.SQLiteCustom/src.update
+          GIT_CONFIG_VALUE_0: none
+        run: swift package resolve --force-resolved-versions
+      - name: Run the core suite with locked dependencies
+        run: swift test --build-system native --force-resolved-versions --no-parallel

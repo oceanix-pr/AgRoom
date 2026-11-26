@@ -1,0 +1,325 @@
+name: AgRoom
+options:
+  bundleIdPrefix: com.agroom
+  developmentLanguage: en
+  deploymentTarget:
+    macOS: "15.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: false
+  groupSortPosition: top
+
+configFiles:
+  Debug: Config/Signing.xcconfig
+  Release: Config/Signing.xcconfig
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    # Swift 6 严格并发（DEVELOPMENT_GUIDE §1）
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  WhisperKit:
+    url: https://github.com/argmaxinc/argmax-oss-swift
+    exactVersion: "0.18.0"
+  SherpaOnnx:
+    url: https://github.com/k2-fsa/sherpa-onnx
+    revision: 1cb484af5e69d3c7803c1eb0b3b5ab8041e0e911
+  mysql-nio:
+    path: vendor/mysql-nio
+  swift-nio:
+    url: https://github.com/apple/swift-nio.git
+    from: "2.81.0"
+  swift-nio-ssl:
+    path: vendor/swift-nio-ssl
+  swift-log:
+    url: https://github.com/apple/swift-log.git
+    from: "1.6.0"
+  swift-markdown:
+    url: https://github.com/swiftlang/swift-markdown.git
+    exactVersion: "0.6.0"
+  swift-cmark:
+    url: https://github.com/swiftlang/swift-cmark.git
+    exactVersion: "0.6.0"
+  GRDB.swift:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
+  # 与 Package.swift 使用同一固定副本；macOS 只声明实际使用的 Network.framework 后端。
+  MailFoundation:
+    path: vendor/MailFoundation
+  MimeFoundation:
+    url: https://github.com/migueldeicaza/MimeFoundation
+    revision: dcb6746729d20cf00c42ad6453b4637a075f7d0b
+
+targets:
+  AgRoom:
+    type: application
+    platform: macOS
+    productName: "AgRoom"
+    sources:
+      - path: Sources/AgRoom
+        excludes:
+          - Info.plist
+          - EmbeddingRuntime
+      - Resources/PrivacyInfo.xcprivacy
+      - Resources/Assets.xcassets
+      # 三语应用显示名（Dock / 菜单栏 / 关于面板 / 窗口标题）：简体与繁体中文为「阿吉屋」，其他语言为 AgRoom。
+      - path: Resources/Localized
+      # 复制与签名交给 Xcode 原生构建阶段，避免脚本沙盒把目录输出当作单个文件授权。
+      - path: Sources/AgRoom/EmbeddingRuntime/arm64
+        includes: ["*.dylib", llama-embedding, llama-intent]
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Helpers/EmbeddingRuntime/arm64
+        attributes: [CodeSignOnCopy]
+      - path: Sources/AgRoom/EmbeddingRuntime/x86_64
+        includes: ["*.dylib", llama-embedding, llama-intent]
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Helpers/EmbeddingRuntime/x86_64
+        attributes: [CodeSignOnCopy]
+      - path: Sources/AgRoom/EmbeddingRuntime/licenses
+        type: folder
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: EmbeddingRuntimeNotices
+      - path: Sources/AgRoom/EmbeddingRuntime/provenance.json
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: EmbeddingRuntimeNotices
+      - path: Sources/AgRoom/EmbeddingRuntime/arm64/LICENSE
+        buildPhase:
+          copyFiles:
+            destination: resources
+            subpath: EmbeddingRuntimeNotices
+    dependencies:
+      - target: AgRoomUI
+        embed: true
+      - target: AgRoomCore
+        embed: true
+      # 守护进程二进制嵌入 Contents/Resources（App 退出时拉起续跑后台对话）
+      - target: AgRoomDaemon
+        embed: true
+        codeSign: true
+      - target: AgRoomRunnerPersonal
+        link: false
+        embed: true
+        codeSign: false
+        removeHeaders: false
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+      - target: AgRoomRunnerWork
+        link: false
+        embed: true
+        codeSign: false
+        removeHeaders: false
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+    postBuildScripts:
+      - name: Verify independent sandbox runners
+        path: scripts/verify-script-runners.sh
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/AgRoomRunnerPersonal.app
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/AgRoomRunnerWork.app
+      - name: Verify knowledge inference runtime
+        path: scripts/verify-knowledge-runtime.sh
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/EmbeddingRuntime
+        basedOnDependencyAnalysis: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agroom.app
+        PRODUCT_NAME: "AgRoom"
+        PRODUCT_MODULE_NAME: AgRoom
+        EXECUTABLE_NAME: AgRoom
+        USE_RECURSIVE_SCRIPT_INPUTS_IN_SCRIPT_PHASES: YES
+        INFOPLIST_FILE: Sources/AgRoom/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: "AgRoom"
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "AgRoom uses speech recognition to transcribe audio into note text."
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "AgRoom uses the microphone to record audio for speech transcription."
+        INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: "AgRoom creates and tracks your to-dos in the system Reminders app."
+        CODE_SIGN_ENTITLEMENTS: Resources/AgRoom.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        # 必须用稳定的开发者身份签名（不能用 ad-hoc "-"）：
+        # ad-hoc 签名 = 二进制 CDHash，每次重新构建都会变化，
+        # 导致钥匙串条目 ACL 无法匹配新构建 → 每次启动弹登录钥匙串密码框
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_PREVIEWS: YES
+
+  AgRoomUI:
+    type: framework
+    platform: macOS
+    sources:
+      - Sources/AgRoomUI
+    dependencies:
+      - target: AgRoomCore
+      - package: swift-markdown
+        product: Markdown
+    resources:
+      - Sources/AgRoomUI/Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agroom.ui
+        DEFINES_MODULE: YES
+        GENERATE_INFOPLIST_FILE: YES
+
+  AgRoomCore:
+    type: framework
+    platform: macOS
+    sources:
+      - Sources/AgRoomCore
+    dependencies:
+      - package: WhisperKit
+        product: WhisperKit
+      - package: SherpaOnnx
+        product: sherpa-onnx
+        embed: false
+      - package: mysql-nio
+        product: MySQLNIO
+      - package: swift-nio
+        product: NIOCore
+      - package: swift-nio
+        product: NIOHTTP1
+      - package: swift-nio
+        product: NIOPosix
+      - package: swift-nio-ssl
+        product: NIOSSL
+      - package: swift-log
+        product: Logging
+      - target: AgRoomScriptIPC
+        link: true
+      - package: GRDB.swift
+        product: GRDB
+      - package: MailFoundation
+        product: MailFoundation
+      - package: MimeFoundation
+        product: MimeFoundation
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agroom.core
+        DEFINES_MODULE: YES
+        GENERATE_INFOPLIST_FILE: YES
+
+  AgRoomDaemon:
+    type: tool
+    platform: macOS
+    sources:
+      - Sources/AgRoomDaemon
+    dependencies:
+      - target: AgRoomCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agroom.daemon
+        # 守护进程仅作为 App 内嵌二进制存在，不应被安装进归档的 Products/usr/local；
+        # 工具目标 SKIP_INSTALL 默认 NO，会破坏 xcodebuild 写归档 ApplicationProperties（Organizer 版本显示）
+        SKIP_INSTALL: YES
+
+  AgRoomCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/AgRoomCoreTests
+    dependencies:
+      - target: AgRoomCore
+      - target: AgRoomUI
+      - target: AgRoomScriptIPC
+      # 测试直接 import GRDB（framework 依赖不会传递到测试 target）
+      - package: GRDB.swift
+        product: GRDB
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agroom.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+  AgRoomScriptIPC:
+    type: library.static
+    platform: macOS
+    sources: [Sources/AgRoomScriptIPC]
+    settings:
+      base:
+        DEFINES_MODULE: YES
+        SKIP_INSTALL: YES
+        # IPC 仅供 Swift 使用；不安装 ObjC 兼容头，也不生成多余的复制脚本。
+        SWIFT_INSTALL_OBJC_HEADER: NO
+
+  AgRoomRunnerPersonal:
+    templates: [SandboxRunner]
+    templateAttributes:
+      identifier: com.agroom.runner.personal
+      entitlements: SpaceRunner
+    settings:
+      base:
+        AGROOM_RUNNER_SPACE: personal
+
+  AgRoomRunnerWork:
+    templates: [SandboxRunner]
+    templateAttributes:
+      identifier: com.agroom.runner.work
+      entitlements: SpaceRunner
+    settings:
+      base:
+        AGROOM_RUNNER_SPACE: work
+
+
+targetTemplates:
+  SandboxRunner:
+    type: application
+    platform: macOS
+    sources: [Sources/AgRoomScriptRunner]
+    dependencies:
+      - target: AgRoomScriptIPC
+    settings:
+      configs:
+        Release:
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ${identifier}
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSBackgroundOnly: YES
+        # 后台运行的隔离执行器仍是 application 目标：Xcode 要求声明分类，
+        # 缺省会为每个 runner 报「No App Category is set」。它们不进入 Dock、也无界面，
+        # 归为 utilities 即可（此处改一次覆盖所有 runner 目标）。
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.utilities"
+        CODE_SIGN_ENTITLEMENTS: Resources/${entitlements}.entitlements
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_DEBUG_DYLIB: NO
+        SKIP_INSTALL: YES
+
+schemes:
+  AgRoom:
+    build:
+      targets:
+        AgRoom: all
+        AgRoomUI: [index, test]
+        AgRoomCore: [index, test]
+    run:
+      executable: AgRoom
+      config: Debug
+    test:
+      targets:
+        - AgRoomCoreTests
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+      customArchiveName: "AgRoom"

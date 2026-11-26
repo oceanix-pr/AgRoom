@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Hardened Runtime：允许用户授权后的麦克风采集 -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<!-- 最小权限原则（DEVELOPMENT_GUIDE §2）：仅启用必需项 -->
+	<!-- 需访问 LLM API（客户端网络） -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- 提醒事项桥层（EventKit）：沙箱下读写提醒事项的必需 entitlement -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,80 @@
+%% AgRoom 核心架构：以当前工作区源码、Package.swift、project.yml 为准。
+%% 实线表示调用、组装或数据流；虚线表示宿主注入、嵌套复用或退出交接。
+%% 参考：../01-项目与架构.md、../02-调度引擎.md、../03-工具系统.md、../05-数据模型存储与知识库.md
+flowchart TB
+    subgraph APP["前台 App 进程"]
+        direction LR
+        Entry["AgRoom<br/>入口 · 窗口 · 菜单栏 · 热键"]
+        UI["AgRoomUI<br/>SwiftUI · ChatView · 功能页 · 任务中心"]
+        Host["UI 宿主工具实现<br/>WKWebView 浏览器 · 小应用草稿"]
+        Entry --> UI
+        UI --- Host
+    end
+
+    Daemon["AgRoomDaemon · 独立进程<br/>headless · 可恢复边界接管 · 按原空间写回"]
+    UI -. "退出时：完整快照与执行权交接" .-> Daemon
+
+    subgraph CORE["AgRoomCore · 不依赖 UI"]
+        direction TB
+        Hub["Hub · 组合根<br/>SpaceStore · 全局 Provider 配置 · make* 工厂<br/>不缓存空间内服务"]
+        Assembly["EngineAssembly<br/>冻结空间 / 工作区 / 任务范围<br/>组装系统提示、最终工具面与引擎"]
+        Capabilities["EngineHostCapabilities<br/>App: foregroundApp · Daemon: headless<br/>能力描述只收窄工具面，不授予执行权限"]
+        Services["空间领域服务<br/>Session · Agent · Memory · Knowledge<br/>SkillStore · Mail · Task · Artifact<br/>每个实例只绑定一个空间连接 / 目录"]
+        Engine["DispatcherEngine · 调度闭环<br/>上下文 · Step / Token 预算 · 取消<br/>权限与确认 · 挂起恢复 · 轨迹 · 完成评估"]
+        Tools["DispatcherTool · 统一工具契约<br/>文件 · 知识 · 技能 · 邮箱 · MCP · 系统桥<br/>Shell / Python · UI 注入工具"]
+        Delegate["智体与协作<br/>AgentTool → 嵌套引擎<br/>TeamCoordinator → DAG Workers<br/>继承空间、权限与预算"]
+        Provider["CloudProvider<br/>OpenAI 兼容 / Anthropic 协议适配<br/>统一消息 · SSE · 有界重试 · 并发闸门"]
+
+        Hub --> Assembly
+        Hub --> Services
+        Capabilities -. "宿主能力过滤" .-> Assembly
+        Assembly --> Engine
+        Engine <-->|"模型请求 / 流式结果"| Provider
+        Engine <-->|"校验 / 审批 / 执行 / toolResult"| Tools
+        Tools <--> Services
+        Tools --> Delegate
+        Delegate -. "嵌套复用" .-> Engine
+    end
+
+    UI --> Hub
+    UI --> Assembly
+    Host -. "hostTools 显式注入" .-> Assembly
+    Daemon -. "复用组装层，使用原任务空间" .-> Assembly
+
+    subgraph LOCAL["本地持久化"]
+        direction LR
+        Global[("global.sqlite<br/>Provider 元数据与共享配置<br/>不含 API Key")]
+        subgraph SPACES["两个空间物理隔离 · 每个服务实例只连接其中一个"]
+            direction LR
+            Personal[("生活空间 personal<br/>personal.sqlite + 独立技能目录<br/>会话 / 智体 / 记忆 / 知识 / 任务 / 邮箱<br/>附件与产物按空间存放")]
+            Work[("工作空间 work<br/>work.sqlite + 独立技能目录<br/>会话 / 智体 / 记忆 / 知识 / 任务 / 邮箱<br/>附件与产物按空间存放")]
+        end
+        Keychain[("macOS Keychain<br/>API Key · 邮箱 / MCP / 数据库凭据<br/>空间凭据按空间命名")]
+    end
+
+    Hub --> Global
+    Services -->|"GRDB · 固定发起空间 · 择一连接"| SPACES
+    Provider --> Keychain
+    LLM["模型端点<br/>远端 HTTPS · 本机回环可用 HTTP"]
+    Provider <-->|"推理请求 / SSE"| LLM
+
+    Runner["AgRoomScriptRunner · 独立进程<br/>App Sandbox · 每次执行新建进程<br/>按空间与用途拆分身份 · 仅链接 AgRoomScriptIPC<br/>不链接 Core / UI，不读取数据库或 Keychain"]
+    Tools -->|"审批后通过 AgRoomScriptIPC"| Runner
+
+    %% 定时触发由 App 内 ScheduledTaskCenter 负责；ScheduledRunner 使用 headless 与只读工具白名单。
+    %% Daemon 新记录按空间分区；旧根历史凭证尚未整体迁移。此图不表示全部历史运行证据已隔离。
+    %% 远程 MCP 当前仅在前台主对话启用；Daemon、定时与子代理关闭此入口。
+    %% Shell 的显式宿主执行仍受独立逐次确认；图中的 ScriptRunner 表示沙盒执行路径。
+
+    classDef host fill:#eff6ff,stroke:#6997d4,color:#17355c;
+    classDef core fill:#ffffff,stroke:#92aac5,color:#23344b;
+    classDef engine fill:#e9f0ff,stroke:#4979ca,color:#163b79;
+    classDef isolated fill:#edf7f3,stroke:#67a38f,color:#235649;
+    classDef process fill:#f4f0fb,stroke:#aa95c9,color:#574578;
+    classDef secret fill:#fff5df,stroke:#c9a559,color:#75551e;
+    class Entry,UI,Host host;
+    class Hub,Assembly,Capabilities,Services,Tools,Provider,Delegate core;
+    class Engine engine;
+    class Personal,Work isolated;
+    class Daemon,Runner process;
+    class Keychain secret;

@@ -1,0 +1,366 @@
+--- a/Sources/CNIOBoringSSL/crypto/curve25519/curve25519.cc
++++ b/Sources/CNIOBoringSSL/crypto/curve25519/curve25519.cc
+@@ -1086,7 +1086,6 @@
+   s14 -= s23 * 997805;
+   s15 += s23 * 136657;
+   s16 -= s23 * 683901;
+-  s23 = 0;
+ 
+   s10 += s22 * 666643;
+   s11 += s22 * 470296;
+@@ -1094,7 +1093,6 @@
+   s13 -= s22 * 997805;
+   s14 += s22 * 136657;
+   s15 -= s22 * 683901;
+-  s22 = 0;
+ 
+   s9 += s21 * 666643;
+   s10 += s21 * 470296;
+@@ -1102,7 +1100,6 @@
+   s12 -= s21 * 997805;
+   s13 += s21 * 136657;
+   s14 -= s21 * 683901;
+-  s21 = 0;
+ 
+   s8 += s20 * 666643;
+   s9 += s20 * 470296;
+@@ -1110,7 +1107,6 @@
+   s11 -= s20 * 997805;
+   s12 += s20 * 136657;
+   s13 -= s20 * 683901;
+-  s20 = 0;
+ 
+   s7 += s19 * 666643;
+   s8 += s19 * 470296;
+@@ -1118,7 +1114,6 @@
+   s10 -= s19 * 997805;
+   s11 += s19 * 136657;
+   s12 -= s19 * 683901;
+-  s19 = 0;
+ 
+   s6 += s18 * 666643;
+   s7 += s18 * 470296;
+@@ -1126,7 +1121,6 @@
+   s9 -= s18 * 997805;
+   s10 += s18 * 136657;
+   s11 -= s18 * 683901;
+-  s18 = 0;
+ 
+   carry6 = (s6 + (1 << 20)) >> 21;
+   s7 += carry6;
+@@ -1169,7 +1163,6 @@
+   s8 -= s17 * 997805;
+   s9 += s17 * 136657;
+   s10 -= s17 * 683901;
+-  s17 = 0;
+ 
+   s4 += s16 * 666643;
+   s5 += s16 * 470296;
+@@ -1177,7 +1170,6 @@
+   s7 -= s16 * 997805;
+   s8 += s16 * 136657;
+   s9 -= s16 * 683901;
+-  s16 = 0;
+ 
+   s3 += s15 * 666643;
+   s4 += s15 * 470296;
+@@ -1185,7 +1177,6 @@
+   s6 -= s15 * 997805;
+   s7 += s15 * 136657;
+   s8 -= s15 * 683901;
+-  s15 = 0;
+ 
+   s2 += s14 * 666643;
+   s3 += s14 * 470296;
+@@ -1193,7 +1184,6 @@
+   s5 -= s14 * 997805;
+   s6 += s14 * 136657;
+   s7 -= s14 * 683901;
+-  s14 = 0;
+ 
+   s1 += s13 * 666643;
+   s2 += s13 * 470296;
+@@ -1201,7 +1191,6 @@
+   s4 -= s13 * 997805;
+   s5 += s13 * 136657;
+   s6 -= s13 * 683901;
+-  s13 = 0;
+ 
+   s0 += s12 * 666643;
+   s1 += s12 * 470296;
+@@ -1300,7 +1289,6 @@
+   s3 -= s12 * 997805;
+   s4 += s12 * 136657;
+   s5 -= s12 * 683901;
+-  s12 = 0;
+ 
+   carry0 = s0 >> 21;
+   s1 += carry0;
+@@ -1575,7 +1563,6 @@
+   s14 -= s23 * 997805;
+   s15 += s23 * 136657;
+   s16 -= s23 * 683901;
+-  s23 = 0;
+ 
+   s10 += s22 * 666643;
+   s11 += s22 * 470296;
+@@ -1583,7 +1570,6 @@
+   s13 -= s22 * 997805;
+   s14 += s22 * 136657;
+   s15 -= s22 * 683901;
+-  s22 = 0;
+ 
+   s9 += s21 * 666643;
+   s10 += s21 * 470296;
+@@ -1591,7 +1577,6 @@
+   s12 -= s21 * 997805;
+   s13 += s21 * 136657;
+   s14 -= s21 * 683901;
+-  s21 = 0;
+ 
+   s8 += s20 * 666643;
+   s9 += s20 * 470296;
+@@ -1599,7 +1584,6 @@
+   s11 -= s20 * 997805;
+   s12 += s20 * 136657;
+   s13 -= s20 * 683901;
+-  s20 = 0;
+ 
+   s7 += s19 * 666643;
+   s8 += s19 * 470296;
+@@ -1607,7 +1591,6 @@
+   s10 -= s19 * 997805;
+   s11 += s19 * 136657;
+   s12 -= s19 * 683901;
+-  s19 = 0;
+ 
+   s6 += s18 * 666643;
+   s7 += s18 * 470296;
+@@ -1615,7 +1598,6 @@
+   s9 -= s18 * 997805;
+   s10 += s18 * 136657;
+   s11 -= s18 * 683901;
+-  s18 = 0;
+ 
+   carry6 = (s6 + (1 << 20)) >> 21;
+   s7 += carry6;
+@@ -1658,7 +1640,6 @@
+   s8 -= s17 * 997805;
+   s9 += s17 * 136657;
+   s10 -= s17 * 683901;
+-  s17 = 0;
+ 
+   s4 += s16 * 666643;
+   s5 += s16 * 470296;
+@@ -1666,7 +1647,6 @@
+   s7 -= s16 * 997805;
+   s8 += s16 * 136657;
+   s9 -= s16 * 683901;
+-  s16 = 0;
+ 
+   s3 += s15 * 666643;
+   s4 += s15 * 470296;
+@@ -1674,7 +1654,6 @@
+   s6 -= s15 * 997805;
+   s7 += s15 * 136657;
+   s8 -= s15 * 683901;
+-  s15 = 0;
+ 
+   s2 += s14 * 666643;
+   s3 += s14 * 470296;
+@@ -1682,7 +1661,6 @@
+   s5 -= s14 * 997805;
+   s6 += s14 * 136657;
+   s7 -= s14 * 683901;
+-  s14 = 0;
+ 
+   s1 += s13 * 666643;
+   s2 += s13 * 470296;
+@@ -1690,7 +1668,6 @@
+   s4 -= s13 * 997805;
+   s5 += s13 * 136657;
+   s6 -= s13 * 683901;
+-  s13 = 0;
+ 
+   s0 += s12 * 666643;
+   s1 += s12 * 470296;
+@@ -1789,7 +1766,6 @@
+   s3 -= s12 * 997805;
+   s4 += s12 * 136657;
+   s5 -= s12 * 683901;
+-  s12 = 0;
+ 
+   carry0 = s0 >> 21;
+   s1 += carry0;
+--- a/Sources/CNIOBoringSSL/crypto/fipsmodule/bn/prime.cc.inc
++++ b/Sources/CNIOBoringSSL/crypto/fipsmodule/bn/prime.cc.inc
+@@ -466,7 +466,6 @@
+   // witness for |w|. This is equivalent to going to step 4.7 in the original
+   // algorithm. To avoid timing leaks, we run the algorithm to the end for prime
+   // inputs.
+-  is_possibly_prime = 0;
+ 
+   // Step 4.4. If z = 1 or z = w-1, b is not a composite witness and w is still
+   // possibly prime.
+--- a/Sources/CNIOBoringSSL/crypto/pem/pem_lib.cc
++++ b/Sources/CNIOBoringSSL/crypto/pem/pem_lib.cc
+@@ -253,7 +253,6 @@
+ 
+   if ((dsize = i2d(x, NULL)) < 0) {
+     OPENSSL_PUT_ERROR(PEM, ERR_R_ASN1_LIB);
+-    dsize = 0;
+     goto err;
+   }
+   // dzise + 8 bytes are needed
+@@ -344,7 +343,6 @@
+     return 1;
+   }
+ 
+-  pass_len = 0;
+   if (!callback) {
+     callback = PEM_def_callback;
+   }
+--- a/Sources/CNIOBoringSSL/crypto/pem/pem_pk8.cc
++++ b/Sources/CNIOBoringSSL/crypto/pem/pem_pk8.cc
+@@ -113,7 +113,6 @@
+     return NULL;
+   }
+ 
+-  pass_len = 0;
+   if (!cb) {
+     cb = PEM_def_callback;
+   }
+--- a/Sources/CNIOBoringSSL/crypto/pem/pem_pkey.cc
++++ b/Sources/CNIOBoringSSL/crypto/pem/pem_pkey.cc
+@@ -58,7 +58,6 @@
+       goto p8err;
+     }
+ 
+-    pass_len = 0;
+     if (!cb) {
+       cb = PEM_def_callback;
+     }
+--- a/Sources/CNIOBoringSSL/crypto/pkcs8/pkcs8.cc
++++ b/Sources/CNIOBoringSSL/crypto/pkcs8/pkcs8.cc
+@@ -118,11 +118,17 @@
+       goto err;
+     }
+ 
+-    for (size_t i = 0; i < S_len; i++) {
+-      I[i] = salt[i % salt_len];
+-    }
+-    for (size_t i = 0; i < P_len; i++) {
+-      I[i + S_len] = pass_raw[i % pass_raw_len];
++    // An empty component has zero padded length. Keep the source-length
++    // condition explicit so the modulo divisor is also proven nonzero.
++    if (salt_len != 0) {
++      for (size_t i = 0; i < S_len; i++) {
++        I[i] = salt[i % salt_len];
++      }
++    }
++    if (pass_raw_len != 0) {
++      for (size_t i = 0; i < P_len; i++) {
++        I[i + S_len] = pass_raw[i % pass_raw_len];
++      }
+     }
+ 
+     while (out_len != 0) {
+--- a/Sources/CNIOBoringSSL/crypto/x509/by_dir.cc
++++ b/Sources/CNIOBoringSSL/crypto/x509/by_dir.cc
+@@ -205,7 +205,7 @@
+   int hash_index;
+   char *b = NULL;
+   X509_OBJECT stmp, *tmp;
+-  const char *postfix = "";
++  const char *postfix;
+ 
+   if (name == NULL) {
+     return 0;
+--- a/Sources/CNIOBoringSSL/ssl/ssl_aead_ctx.cc
++++ b/Sources/CNIOBoringSSL/ssl/ssl_aead_ctx.cc
+@@ -255,8 +255,8 @@
+   Span<const uint8_t> ad = GetAdditionalData(ad_storage, type, record_version,
+                                              seqnum, plaintext_len, header);
+ 
+-  // Assemble the nonce.
+-  uint8_t nonce[EVP_AEAD_MAX_NONCE_LENGTH];
++  // Initialize the full buffer before assembling the dynamically sized nonce.
++  uint8_t nonce[EVP_AEAD_MAX_NONCE_LENGTH] = {0};
+   size_t nonce_len = 0;
+ 
+   // Prepend the fixed nonce, or left-pad with zeros if XORing.
+--- a/Sources/CNIOBoringSSL/ssl/ssl_cipher.cc
++++ b/Sources/CNIOBoringSSL/ssl/ssl_cipher.cc
+@@ -837,7 +837,6 @@
+       }
+ 
+       if (ch == '|') {
+-        rule = CIPHER_ADD;
+         l++;
+         continue;
+       } else if (!OPENSSL_isalnum(ch)) {
+--- a/Tests/NIOSSLTests/SSLPKCS12BundleTest.swift
++++ b/Tests/NIOSSLTests/SSLPKCS12BundleTest.swift
+@@ -569,6 +569,20 @@
+         XCTAssertEqual(decoded.certificateChain, certificates)
+     }
+ 
++    func testMakePKCS12_EmptyAndAbsentPassphrase() throws {
++        let privateKey = try NIOSSLPrivateKey(bytes: .init(samplePemKey.utf8), format: .pem)
++        let certificate = try NIOSSLCertificate(bytes: .init(samplePemCert.utf8), format: .pem)
++        let bundle = NIOSSLPKCS12Bundle(certificateChain: [certificate], privateKey: privateKey)
++        let encoded = try bundle.serialize(passphrase: [UInt8]())
++        // Parsing without a password exercises the NULL-password KDF path before
++        // the library falls back to the PKCS#12 empty-string representation.
++        for passphrase in [Optional<[UInt8]>.none, Optional.some([UInt8]())] {
++            let decoded = try NIOSSLPKCS12Bundle(buffer: encoded, passphrase: passphrase)
++            XCTAssertEqual(decoded, bundle)
++        }
++        XCTAssertThrowsError(try NIOSSLPKCS12Bundle(buffer: encoded, passphrase: "incorrect".utf8))
++    }
++
+     func testMakePKCS12_IncorrectPassphrase() throws {
+         let privateKey = try NIOSSLPrivateKey(bytes: .init(samplePemKey.utf8), format: .pem)
+         let mainCert = try NIOSSLCertificate(bytes: .init(samplePemCert.utf8), format: .pem)
+--- a/Tests/NIOSSLTests/SSLPrivateKeyTests.swift
++++ b/Tests/NIOSSLTests/SSLPrivateKeyTests.swift
+@@ -15,11 +15,39 @@
+ import Foundation
+ import NIOCore
+ import XCTest
++@_implementationOnly import CNIOBoringSSL
+ 
+ @testable import NIOSSL
+ 
+ class SSLPrivateKeyTest: XCTestCase {
+     static let dynamicallyGeneratedKey = generateSelfSignedCert().1
++
++    func testEd25519RFC8032ScalarReduction() {
++        // RFC 8032 section 7.1, test 1 exercises scalar reduction and multiply-add.
++        func bytes(_ hex: String) -> [UInt8] {
++            stride(from: 0, to: hex.count, by: 2).map { offset in
++                let start = hex.index(hex.startIndex, offsetBy: offset)
++                let end = hex.index(start, offsetBy: 2)
++                return UInt8(hex[start..<end], radix: 16)!
++            }
++        }
++        let seed = bytes("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60")
++        let expectedPublicKey = bytes("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a")
++        let expectedSignature = bytes(
++            "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155"
++                + "5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
++        )
++        var publicKey = [UInt8](repeating: 0, count: 32)
++        var privateKey = [UInt8](repeating: 0, count: 64)
++        CNIOBoringSSL_ED25519_keypair_from_seed(&publicKey, &privateKey, seed)
++        XCTAssertEqual(publicKey, expectedPublicKey)
++        var signature = [UInt8](repeating: 0, count: 64)
++        XCTAssertEqual(CNIOBoringSSL_ED25519_sign(&signature, nil, 0, privateKey), 1)
++        XCTAssertEqual(signature, expectedSignature)
++        XCTAssertEqual(CNIOBoringSSL_ED25519_verify(nil, 0, signature, publicKey), 1)
++        signature[0] ^= 1
++        XCTAssertEqual(CNIOBoringSSL_ED25519_verify(nil, 0, signature, publicKey), 0)
++    }
+ 
+     static func withPEMKeyFile(_ body: (String) throws -> Void) throws {
+         let path = try dumpToFile(

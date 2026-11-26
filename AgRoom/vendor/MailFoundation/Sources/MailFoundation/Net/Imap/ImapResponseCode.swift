@@ -1,0 +1,115 @@
+//
+// Author: Jeffrey Stedfast <jestedfa@microsoft.com>
+//
+// Copyright (c) 2013-2026 .NET Foundation and Contributors
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+//
+// ImapResponseCode.swift
+//
+// Parse IMAP response codes.
+//
+
+public enum ImapResponseCodeKind: Sendable, Equatable {
+    case uidNext(UInt32)
+    case uidValidity(UInt32)
+    case highestModSeq(UInt64)
+    case copyUid(ImapCopyUid)
+}
+
+public struct ImapResponseCode: Sendable, Equatable {
+    public let kind: ImapResponseCodeKind
+
+    public static func parseAll(_ text: String) -> [ImapResponseCode] {
+        var results: [ImapResponseCode] = []
+        var index = text.startIndex
+
+        while index < text.endIndex {
+            guard let open = text[index...].firstIndex(of: "[") else { break }
+            guard let close = text[open...].firstIndex(of: "]") else { break }
+            let inner = text[text.index(after: open)..<close]
+            if let code = parseCode(String(inner)) {
+                results.append(code)
+            }
+            index = text.index(after: close)
+        }
+
+        return results
+    }
+
+    private static func parseCode(_ text: String) -> ImapResponseCode? {
+        let tokens = text.split(separator: " ", omittingEmptySubsequences: true)
+        guard tokens.count >= 2 else { return nil }
+        let name = tokens[0].uppercased()
+        let value = tokens[1]
+        switch name {
+        case "UIDNEXT":
+            if let number = UInt32(value) {
+                return ImapResponseCode(kind: .uidNext(number))
+            }
+        case "UIDVALIDITY":
+            if let number = UInt32(value) {
+                return ImapResponseCode(kind: .uidValidity(number))
+            }
+        case "HIGHESTMODSEQ":
+            if let number = UInt64(value) {
+                return ImapResponseCode(kind: .highestModSeq(number))
+            }
+        case "COPYUID":
+            if let number = UInt32(value) {
+                let sourceToken = tokens.count > 2 ? String(tokens[2]) : nil
+                let destinationToken = tokens.count > 3 ? String(tokens[3]) : nil
+                let source = sourceToken.flatMap { try? UniqueIdSet(parsing: $0, validity: number) }
+                let destination = destinationToken.flatMap { try? UniqueIdSet(parsing: $0, validity: number) }
+                let copyUid = ImapCopyUid(uidValidity: number, source: source, destination: destination)
+                return ImapResponseCode(kind: .copyUid(copyUid))
+            }
+        default:
+            break
+        }
+        return nil
+    }
+}
+
+public struct ImapCopyUid: Sendable, Equatable {
+    public let uidValidity: UInt32
+    public let source: UniqueIdSet?
+    public let destination: UniqueIdSet?
+}
+
+public extension ImapCopyUid {
+    static func == (lhs: ImapCopyUid, rhs: ImapCopyUid) -> Bool {
+        lhs.uidValidity == rhs.uidValidity
+            && lhs.source?.description == rhs.source?.description
+            && lhs.destination?.description == rhs.destination?.description
+    }
+}
+
+public extension ImapResponseCode {
+    static func copyUid(from text: String) -> ImapCopyUid? {
+        for code in parseAll(text) {
+            if case let .copyUid(value) = code.kind {
+                return value
+            }
+        }
+        return nil
+    }
+}

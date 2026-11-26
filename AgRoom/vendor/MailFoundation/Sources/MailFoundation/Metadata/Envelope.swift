@@ -1,0 +1,763 @@
+//
+// Author: Jeffrey Stedfast <jestedfa@microsoft.com>
+//
+// Copyright (c) 2013-2026 .NET Foundation and Contributors
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+//
+// Envelope.swift
+//
+// Ported from MailKit (C#) to Swift.
+//
+
+import Foundation
+import MimeFoundation
+
+/// An error that occurs during envelope parsing.
+///
+/// This error is thrown when attempting to parse an envelope from a string
+/// representation that does not conform to the expected format.
+public enum EnvelopeParseError: Error, Sendable {
+    /// The envelope text contains an invalid or unexpected token.
+    case invalidToken
+}
+
+/// A message envelope containing a brief summary of the message.
+///
+/// The envelope of a message contains information such as the date the message was sent,
+/// the subject of the message, the sender of the message, who the message was sent to,
+/// which message(s) the message may be in reply to, and the message id.
+///
+/// This class also provides extended header information commonly used for email authentication
+/// and mailing list management, including DKIM signatures, SPF results, and List-* headers.
+///
+/// ## Topics
+///
+/// ### Core Addressing
+/// - ``from``
+/// - ``sender``
+/// - ``replyTo``
+/// - ``to``
+/// - ``cc``
+/// - ``bcc``
+///
+/// ### Message Identification
+/// - ``messageId``
+/// - ``inReplyTo``
+/// - ``date``
+/// - ``subject``
+///
+/// ### Mailing List Headers
+/// - ``listId``
+/// - ``listArchive``
+/// - ``listHelp``
+/// - ``listOwner``
+/// - ``listPost``
+/// - ``listSubscribe``
+/// - ``listUnsubscribe``
+/// - ``listUnsubscribePost``
+///
+/// ### Email Authentication
+/// - ``dkimSignatures``
+/// - ``domainKeySignatures``
+/// - ``authenticationResults``
+/// - ``arcAuthenticationResults``
+/// - ``receivedSpf``
+/// - ``arcSeals``
+/// - ``arcMessageSignatures``
+///
+/// ## Example
+///
+/// ```swift
+/// let envelope = Envelope()
+/// envelope.from.add(MailboxAddress(name: "John Doe", address: "john@example.com"))
+/// envelope.to.add(MailboxAddress(name: "Jane Doe", address: "jane@example.com"))
+/// envelope.subject = "Hello, World!"
+/// envelope.date = Date()
+/// ```
+public final class Envelope {
+    /// The address(es) that the message is from.
+    ///
+    /// Gets the list of addresses in the `From` header field.
+    /// This typically contains the author(s) of the message.
+    public let from: InternetAddressList
+
+    /// The actual sender(s) of the message.
+    ///
+    /// The sender may differ from the addresses in ``from`` if the message was sent
+    /// by someone on behalf of someone else. This corresponds to the `Sender` header field.
+    public let sender: InternetAddressList
+
+    /// The address(es) that replies should be sent to.
+    ///
+    /// The senders of the message may prefer that replies are sent somewhere other
+    /// than the address they used to send the message. This corresponds to the
+    /// `Reply-To` header field.
+    public let replyTo: InternetAddressList
+
+    /// The list of addresses that the message was sent to.
+    ///
+    /// Gets the addresses in the `To` header field representing the primary recipients.
+    public let to: InternetAddressList
+
+    /// The list of addresses that the message was carbon-copied to.
+    ///
+    /// Gets the addresses in the `Cc` header field representing secondary recipients
+    /// who receive a copy of the message.
+    public let cc: InternetAddressList
+
+    /// The list of addresses that the message was blind-carbon-copied to.
+    ///
+    /// Gets the addresses in the `Bcc` header field. These recipients are hidden
+    /// from other recipients of the message.
+    public let bcc: InternetAddressList
+
+    /// The Message-Id that the message is replying to.
+    ///
+    /// This corresponds to the `In-Reply-To` header field and contains the message
+    /// identifier of the message being replied to.
+    public var inReplyTo: String?
+
+    /// The date that the message was sent, if available.
+    ///
+    /// This corresponds to the `Date` header field and represents when the message
+    /// was composed by the sender.
+    public var date: Date?
+
+    /// The unique identifier of the message, if available.
+    ///
+    /// This corresponds to the `Message-Id` header field, which provides a globally
+    /// unique identifier for the message, typically in the format `<unique-id@domain>`.
+    public var messageId: String?
+
+    /// The subject of the message.
+    ///
+    /// This corresponds to the `Subject` header field.
+    public var subject: String?
+
+    /// The identifier of the mailing list, if applicable.
+    ///
+    /// This corresponds to the `List-Id` header field defined in RFC 2919.
+    public var listId: String?
+
+    /// The URL of the mailing list archive, if applicable.
+    ///
+    /// This corresponds to the `List-Archive` header field defined in RFC 2369.
+    public var listArchive: String?
+
+    /// The URL or address for getting help with the mailing list, if applicable.
+    ///
+    /// This corresponds to the `List-Help` header field defined in RFC 2369.
+    public var listHelp: String?
+
+    /// The address of the mailing list owner, if applicable.
+    ///
+    /// This corresponds to the `List-Owner` header field defined in RFC 2369.
+    public var listOwner: String?
+
+    /// The URL or address for posting to the mailing list, if applicable.
+    ///
+    /// This corresponds to the `List-Post` header field defined in RFC 2369.
+    public var listPost: String?
+
+    /// The URL or address for subscribing to the mailing list, if applicable.
+    ///
+    /// This corresponds to the `List-Subscribe` header field defined in RFC 2369.
+    public var listSubscribe: String?
+
+    /// The URL or address for unsubscribing from the mailing list, if applicable.
+    ///
+    /// This corresponds to the `List-Unsubscribe` header field defined in RFC 2369.
+    public var listUnsubscribe: String?
+
+    /// The HTTP POST body for one-click unsubscribe, if applicable.
+    ///
+    /// This corresponds to the `List-Unsubscribe-Post` header field defined in RFC 8058,
+    /// which enables one-click unsubscribe functionality.
+    public var listUnsubscribePost: String?
+
+    /// The DKIM-Signature header values.
+    ///
+    /// Contains the raw values of all `DKIM-Signature` headers present in the message,
+    /// used for DomainKeys Identified Mail authentication as defined in RFC 6376.
+    public var dkimSignatures: [String]
+
+    /// The DomainKey-Signature header values.
+    ///
+    /// Contains the raw values of all `DomainKey-Signature` headers present in the message,
+    /// used for the older DomainKeys authentication standard.
+    public var domainKeySignatures: [String]
+
+    /// The Authentication-Results header values.
+    ///
+    /// Contains the raw values of all `Authentication-Results` headers present in the message,
+    /// which report the results of email authentication checks as defined in RFC 8601.
+    public var authenticationResults: [String]
+
+    /// The ARC-Authentication-Results header values.
+    ///
+    /// Contains the raw values of all `ARC-Authentication-Results` headers present in the message,
+    /// part of the Authenticated Received Chain defined in RFC 8617.
+    public var arcAuthenticationResults: [String]
+
+    /// The Received-SPF header values.
+    ///
+    /// Contains the raw values of all `Received-SPF` headers present in the message,
+    /// which report the results of SPF (Sender Policy Framework) checks as defined in RFC 7208.
+    public var receivedSpf: [String]
+
+    /// The ARC-Seal header values.
+    ///
+    /// Contains the raw values of all `ARC-Seal` headers present in the message,
+    /// part of the Authenticated Received Chain defined in RFC 8617.
+    public var arcSeals: [String]
+
+    /// The ARC-Message-Signature header values.
+    ///
+    /// Contains the raw values of all `ARC-Message-Signature` headers present in the message,
+    /// part of the Authenticated Received Chain defined in RFC 8617.
+    public var arcMessageSignatures: [String]
+
+    /// Creates a new empty envelope.
+    ///
+    /// Initializes all address lists to empty lists and all array properties to empty arrays.
+    public init() {
+        self.from = InternetAddressList()
+        self.sender = InternetAddressList()
+        self.replyTo = InternetAddressList()
+        self.to = InternetAddressList()
+        self.cc = InternetAddressList()
+        self.bcc = InternetAddressList()
+        self.dkimSignatures = []
+        self.domainKeySignatures = []
+        self.authenticationResults = []
+        self.arcAuthenticationResults = []
+        self.receivedSpf = []
+        self.arcSeals = []
+        self.arcMessageSignatures = []
+    }
+
+    private static func appendQuoted(_ builder: inout String, _ value: String) {
+        builder.append("\"")
+        for ch in value {
+            if ch == "\\" || ch == "\"" {
+                builder.append("\\")
+            }
+            builder.append(ch)
+        }
+        builder.append("\"")
+    }
+
+    private static func encodeMailbox(_ builder: inout String, mailbox: MailboxAddress) {
+        builder.append("(")
+
+        if let name = mailbox.name {
+            appendQuoted(&builder, name)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if mailbox.route.count != 0 {
+            appendQuoted(&builder, mailbox.route.description)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        let address = mailbox.address
+        if let atIndex = address.lastIndex(of: "@") {
+            let user = String(address[..<atIndex])
+            let domain = String(address[address.index(after: atIndex)...])
+            appendQuoted(&builder, user)
+            builder.append(" ")
+            appendQuoted(&builder, domain)
+        } else {
+            appendQuoted(&builder, address)
+            builder.append(" \"localhost\"")
+        }
+
+        builder.append(")")
+    }
+
+    private static func encodeGroup(_ builder: inout String, group: GroupAddress) {
+        builder.append("(NIL NIL ")
+        appendQuoted(&builder, group.name ?? "")
+        builder.append(" NIL)")
+        encodeAddressListAddresses(&builder, list: group.members)
+        builder.append("(NIL NIL NIL NIL)")
+    }
+
+    private static func encodeAddressListAddresses(_ builder: inout String, list: InternetAddressList) {
+        for address in list {
+            if let mailbox = address as? MailboxAddress {
+                encodeMailbox(&builder, mailbox: mailbox)
+            } else if let group = address as? GroupAddress {
+                encodeGroup(&builder, group: group)
+            }
+        }
+    }
+
+    private static func encodeAddressList(_ builder: inout String, list: InternetAddressList) {
+        builder.append("(")
+        encodeAddressListAddresses(&builder, list: list)
+        builder.append(")")
+    }
+
+    private func encode(_ builder: inout String) {
+        builder.append("(")
+
+        if let date {
+            builder.append("\"")
+            builder.append(DateUtils.formatDate(date))
+            builder.append("\" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if let subject {
+            Self.appendQuoted(&builder, subject)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if from.count > 0 {
+            Self.encodeAddressList(&builder, list: from)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if sender.count > 0 {
+            Self.encodeAddressList(&builder, list: sender)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if replyTo.count > 0 {
+            Self.encodeAddressList(&builder, list: replyTo)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if to.count > 0 {
+            Self.encodeAddressList(&builder, list: to)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if cc.count > 0 {
+            Self.encodeAddressList(&builder, list: cc)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if bcc.count > 0 {
+            Self.encodeAddressList(&builder, list: bcc)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if let inReplyTo {
+            let normalized = Self.normalizeReference(inReplyTo)
+            Self.appendQuoted(&builder, normalized)
+            builder.append(" ")
+        } else {
+            builder.append("NIL ")
+        }
+
+        if let messageId {
+            let normalized = Self.normalizeReference(messageId)
+            Self.appendQuoted(&builder, normalized)
+        } else {
+            builder.append("NIL")
+        }
+
+        builder.append(")")
+    }
+
+    /// Returns a string representation of the envelope.
+    ///
+    /// The returned string is in a format similar to IMAP's ENVELOPE syntax and can be
+    /// parsed by ``init(parsing:)``.
+    ///
+    /// - Note: The syntax of the string returned, while similar to IMAP's ENVELOPE syntax,
+    ///   is not completely compatible with the IMAP protocol.
+    ///
+    /// - Returns: A string representation of the envelope.
+    public func toString() -> String {
+        var builder = ""
+        encode(&builder)
+        return builder
+    }
+
+    private static func isNil(_ bytes: [UInt8], index: Int) -> Bool {
+        guard index + 2 < bytes.count else {
+            return false
+        }
+        let n = bytes[index]
+        let i = bytes[index + 1]
+        let l = bytes[index + 2]
+        return (n == 0x4E || n == 0x6E) && (i == 0x49 || i == 0x69) && (l == 0x4C || l == 0x6C)
+    }
+
+    private static func skipSpaces(_ bytes: [UInt8], index: inout Int) {
+        while index < bytes.count, bytes[index] == 0x20 {
+            index += 1
+        }
+    }
+
+    private static func tryParseNString(_ bytes: [UInt8], index: inout Int) -> (success: Bool, value: String?) {
+        skipSpaces(bytes, index: &index)
+        guard index < bytes.count else {
+            return (false, nil)
+        }
+
+        if bytes[index] == 0x7B { // '{'
+            return tryParseLiteralString(bytes, index: &index)
+        }
+
+        if bytes[index] != 0x22 {
+            if index + 3 <= bytes.count, isNil(bytes, index: index) {
+                index += 3
+                return (true, nil)
+            }
+            return (false, nil)
+        }
+
+        index += 1
+        var buffer: [UInt8] = []
+        buffer.reserveCapacity(64)
+        var escaped = false
+
+        while index < bytes.count {
+            let byte = bytes[index]
+            if byte == 0x22 && !escaped {
+                break
+            }
+
+            if escaped || byte != 0x5C {
+                buffer.append(byte)
+                escaped = false
+            } else {
+                escaped = true
+            }
+
+            index += 1
+        }
+
+        guard index < bytes.count else {
+            return (false, nil)
+        }
+
+        let string = String(decoding: buffer, as: UTF8.self)
+        index += 1
+        return (true, string)
+    }
+
+    private static func tryParseLiteralString(_ bytes: [UInt8], index: inout Int) -> (success: Bool, value: String?) {
+        guard index < bytes.count, bytes[index] == 0x7B else {
+            return (false, nil)
+        }
+
+        index += 1
+        var length: Int = 0
+        var hasDigits = false
+
+        while index < bytes.count {
+            let byte = bytes[index]
+            if byte >= 0x30, byte <= 0x39 {
+                hasDigits = true
+                length = (length * 10) + Int(byte - 0x30)
+                index += 1
+                continue
+            }
+            if byte == 0x2B { // '+'
+                index += 1
+                continue
+            }
+            if byte == 0x7D { // '}'
+                index += 1
+                break
+            }
+            return (false, nil)
+        }
+
+        guard hasDigits else { return (false, nil) }
+        guard index + 1 < bytes.count, bytes[index] == 0x0D, bytes[index + 1] == 0x0A else {
+            return (false, nil)
+        }
+        index += 2
+
+        guard index + length <= bytes.count else {
+            return (false, nil)
+        }
+
+        let literalBytes = bytes[index..<(index + length)]
+        index += length
+        let string = String(decoding: literalBytes, as: UTF8.self)
+        return (true, string)
+    }
+
+    private static func tryParseAddress(_ bytes: [UInt8], index: inout Int) -> (success: Bool, value: InternetAddress?) {
+        guard index < bytes.count, bytes[index] == 0x28 else {
+            return (false, nil)
+        }
+
+        index += 1
+
+        let nameResult = tryParseNString(bytes, index: &index)
+        guard nameResult.success else { return (false, nil) }
+        let routeResult = tryParseNString(bytes, index: &index)
+        guard routeResult.success else { return (false, nil) }
+        let userResult = tryParseNString(bytes, index: &index)
+        guard userResult.success else { return (false, nil) }
+        let domainResult = tryParseNString(bytes, index: &index)
+        guard domainResult.success else { return (false, nil) }
+
+        skipSpaces(bytes, index: &index)
+        guard index < bytes.count, bytes[index] == 0x29 else {
+            return (false, nil)
+        }
+        index += 1
+
+        if let domain = domainResult.value {
+            let user = userResult.value ?? ""
+            let address = (domain == "localhost") ? user : "\(user)@\(domain)"
+            if let routeText = routeResult.value,
+               let route = try? DomainList(parsing: routeText) {
+                let mailbox = MailboxAddress(name: nameResult.value, route: Array(route), address: address)
+                return (true, mailbox)
+            }
+            return (true, MailboxAddress(name: nameResult.value, address: address))
+        }
+
+        if let user = userResult.value {
+            return (true, GroupAddress(name: user))
+        }
+
+        return (true, nil)
+    }
+
+    private static func tryParseAddressList(_ bytes: [UInt8], index: inout Int) -> (success: Bool, value: InternetAddressList?) {
+        skipSpaces(bytes, index: &index)
+        guard index < bytes.count else {
+            return (false, nil)
+        }
+
+        if bytes[index] != 0x28 {
+            if index + 3 <= bytes.count, isNil(bytes, index: index) {
+                index += 3
+                return (true, InternetAddressList())
+            }
+            return (false, nil)
+        }
+
+        index += 1
+        guard index < bytes.count else {
+            return (false, nil)
+        }
+
+        let list = InternetAddressList()
+        var stack: [InternetAddressList] = [list]
+        var sp = 0
+
+        while index < bytes.count {
+            if bytes[index] == 0x29 {
+                break
+            }
+
+            let addressResult = tryParseAddress(bytes, index: &index)
+            guard addressResult.success else { return (false, nil) }
+
+            if let address = addressResult.value {
+                stack[sp].add(address)
+                if let group = address as? GroupAddress {
+                    stack.append(group.members)
+                    sp += 1
+                }
+            } else if sp > 0 {
+                stack.removeLast()
+                sp -= 1
+            }
+
+            skipSpaces(bytes, index: &index)
+        }
+
+        guard index < bytes.count, bytes[index] == 0x29 else {
+            return (false, nil)
+        }
+        index += 1
+        return (true, list)
+    }
+
+    private static func normalizeReference(_ value: String) -> String {
+        if value.count > 1, value.first != "<", value.last != ">" {
+            return "<\(value)>"
+        }
+        return value
+    }
+
+    private static func firstReference(in value: String) -> String? {
+        MessageIdList.parseAll(value).first
+    }
+
+    private static func parseMessageId(_ value: String) -> String? {
+        MessageIdList.parseMessageId(value)
+    }
+
+    private static func tryParseEnvelope(_ bytes: [UInt8], index: inout Int) -> (success: Bool, value: Envelope?) {
+        skipSpaces(bytes, index: &index)
+        guard index < bytes.count else {
+            return (false, nil)
+        }
+
+        if bytes[index] != 0x28 {
+            if index + 3 <= bytes.count, isNil(bytes, index: index) {
+                index += 3
+                return (true, nil)
+            }
+            return (false, nil)
+        }
+
+        index += 1
+
+        let dateResult = tryParseNString(bytes, index: &index)
+        guard dateResult.success else { return (false, nil) }
+        var parsedDate: Date?
+        if let dateText = dateResult.value {
+            guard let date = DateUtils.tryParse(dateText) else {
+                return (false, nil)
+            }
+            parsedDate = date
+        }
+
+        let subjectResult = tryParseNString(bytes, index: &index)
+        guard subjectResult.success else { return (false, nil) }
+
+        let fromResult = tryParseAddressList(bytes, index: &index)
+        guard fromResult.success else { return (false, nil) }
+        let senderResult = tryParseAddressList(bytes, index: &index)
+        guard senderResult.success else { return (false, nil) }
+        let replyToResult = tryParseAddressList(bytes, index: &index)
+        guard replyToResult.success else { return (false, nil) }
+        let toResult = tryParseAddressList(bytes, index: &index)
+        guard toResult.success else { return (false, nil) }
+        let ccResult = tryParseAddressList(bytes, index: &index)
+        guard ccResult.success else { return (false, nil) }
+        let bccResult = tryParseAddressList(bytes, index: &index)
+        guard bccResult.success else { return (false, nil) }
+
+        let inReplyToResult = tryParseNString(bytes, index: &index)
+        guard inReplyToResult.success else { return (false, nil) }
+        let messageIdResult = tryParseNString(bytes, index: &index)
+        guard messageIdResult.success else { return (false, nil) }
+
+        guard index < bytes.count, bytes[index] == 0x29 else {
+            return (false, nil)
+        }
+        index += 1
+
+        let envelope = Envelope()
+        envelope.date = parsedDate
+        envelope.subject = subjectResult.value
+        if let list = fromResult.value { envelope.from.addRange(Array(list)) }
+        if let list = senderResult.value { envelope.sender.addRange(Array(list)) }
+        if let list = replyToResult.value { envelope.replyTo.addRange(Array(list)) }
+        if let list = toResult.value { envelope.to.addRange(Array(list)) }
+        if let list = ccResult.value { envelope.cc.addRange(Array(list)) }
+        if let list = bccResult.value { envelope.bcc.addRange(Array(list)) }
+
+        if let inReplyTo = inReplyToResult.value {
+            envelope.inReplyTo = firstReference(in: inReplyTo) ?? inReplyTo
+        }
+        if let messageId = messageIdResult.value {
+            envelope.messageId = parseMessageId(messageId) ?? messageId
+        }
+
+        return (true, envelope)
+    }
+
+    /// Parses the given text into a new envelope instance.
+    ///
+    /// Parses an envelope value from the specified text. The text format is similar to
+    /// IMAP's ENVELOPE syntax but is not completely compatible.
+    ///
+    /// - Parameter text: The text to parse.
+    /// - Throws: ``EnvelopeParseError/invalidToken`` if the text cannot be parsed.
+    ///
+    /// ## Example
+    ///
+    /// ```swift
+    /// let text = "(\"Mon, 20 Jan 2025 10:30:00 -0500\" \"Test Subject\" ((\"John\" NIL \"john\" \"example.com\")) NIL NIL ((\"Jane\" NIL \"jane\" \"example.com\")) NIL NIL NIL \"<abc123@example.com>\")"
+    /// let envelope = try Envelope(parsing: text)
+    /// ```
+    public convenience init(parsing text: String) throws {
+        var index = 0
+        let bytes = Array(text.utf8)
+        let result = Self.tryParseEnvelope(bytes, index: &index)
+        guard result.success, index == bytes.count, let envelope = result.value else {
+            throw EnvelopeParseError.invalidToken
+        }
+
+        self.init()
+        self.date = envelope.date
+        self.subject = envelope.subject
+        self.from.addRange(Array(envelope.from))
+        self.sender.addRange(Array(envelope.sender))
+        self.replyTo.addRange(Array(envelope.replyTo))
+        self.to.addRange(Array(envelope.to))
+        self.cc.addRange(Array(envelope.cc))
+        self.bcc.addRange(Array(envelope.bcc))
+        self.inReplyTo = envelope.inReplyTo
+        self.messageId = envelope.messageId
+        self.listId = envelope.listId
+        self.listArchive = envelope.listArchive
+        self.listHelp = envelope.listHelp
+        self.listOwner = envelope.listOwner
+        self.listPost = envelope.listPost
+        self.listSubscribe = envelope.listSubscribe
+        self.listUnsubscribe = envelope.listUnsubscribe
+        self.listUnsubscribePost = envelope.listUnsubscribePost
+        self.dkimSignatures = envelope.dkimSignatures
+        self.domainKeySignatures = envelope.domainKeySignatures
+        self.authenticationResults = envelope.authenticationResults
+        self.arcAuthenticationResults = envelope.arcAuthenticationResults
+        self.receivedSpf = envelope.receivedSpf
+        self.arcSeals = envelope.arcSeals
+        self.arcMessageSignatures = envelope.arcMessageSignatures
+    }
+}
+
+extension Envelope: CustomStringConvertible {
+    /// A textual representation of the envelope.
+    ///
+    /// Returns the same value as ``toString()``.
+    public var description: String {
+        toString()
+    }
+}

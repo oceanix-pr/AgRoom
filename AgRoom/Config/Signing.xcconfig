@@ -1,0 +1,2 @@
+// Set DEVELOPMENT_TEAM in Signing.local.xcconfig to use your Apple Development identity in Xcode.
+#include? "Signing.local.xcconfig"

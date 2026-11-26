@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1600" viewBox="0 0 1800 1600" role="img" aria-labelledby="title description">
+<title id="title">AgRoom 核心架构</title>
+<desc id="description">前台 App 与 UI 单向依赖 Core；Hub、空间服务和 EngineAssembly 组装 DispatcherEngine；引擎通过统一权限与确认边界调用工具和模型，两个空间物理隔离。Daemon 复用无头引擎，沙盒脚本通过独立 IPC 执行器运行。</desc>
+<rect width="1800" height="1600" fill="#f7f9fc"/>
+<text x="64" y="84.75999999999999" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="48" font-weight="600" fill="#24354a">AgRoom 核心架构</text>
+<text x="64" y="131.01" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="23" font-weight="400" fill="#63738a">从界面输入到模型与工具执行，再到按空间持久化</text>
+<rect x="1450" y="51" width="286" height="40" rx="20" fill="#ebeff6" stroke="none" stroke-width="0"/>
+<text x="1593" y="76.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">原生 macOS  ·  Swift 6</text>
+<polyline points="1125,128 1163,128" fill="none" stroke="#527baa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1176" y="132.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#63738a">调用 / 数据流</text>
+<polyline points="1404,128 1442,128" fill="none" stroke="#9372b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<text x="1455" y="132.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#63738a">能力 / 进程交接</text>
+<text x="64" y="170.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="600" fill="#63738a">01  交互与宿主</text>
+<rect x="64" y="390" width="1186" height="700" rx="22" fill="#f0f4fa" stroke="#c6d3e4" stroke-width="1.4"/>
+<text x="96" y="436.88" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="24" font-weight="600" fill="#24354a">02  AgRoomCore</text>
+<text x="332" y="438.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">业务与运行时 · 不依赖 UI</text>
+<polyline points="394,252 450,252" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="450.00,252.00 440.00,247.50 440.00,256.50" fill="#527baa"/>
+<polyline points="1250,252 1370,252" fill="none" stroke="#9372b6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<polygon points="1370.00,252.00 1360.00,247.50 1360.00,256.50" fill="#9372b6"/>
+<rect x="1269.0" y="218" width="82.0" height="27" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="1310" y="235.79" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#9372b6">退出交接</text>
+<polyline points="580,320 580,468" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="580.00,468.00 584.50,458.00 575.50,458.00" fill="#527baa"/>
+<rect x="530.5" y="342" width="99.0" height="27" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="580" y="359.79" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#63738a">按任务组装</text>
+<polyline points="1553,320 1553,365 790,365 790,468" fill="none" stroke="#9372b6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<polygon points="790.00,468.00 794.50,458.00 785.50,458.00" fill="#9372b6"/>
+<rect x="979.5" y="341" width="181.0" height="28" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="1070" y="359.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#9372b6">复用 Core · headless</text>
+<polyline points="386,534 442,534" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="442.00,534.00 432.00,529.50 432.00,538.50" fill="#527baa"/>
+<polyline points="928,534 872,534" fill="none" stroke="#2d8b87" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<polygon points="872.00,534.00 882.00,538.50 882.00,529.50" fill="#2d8b87"/>
+<polyline points="241,600 241,658" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="241.00,658.00 245.50,648.00 236.50,648.00" fill="#527baa"/>
+<polyline points="657,600 657,658" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="657.00,658.00 661.50,648.00 652.50,648.00" fill="#527baa"/>
+<polyline points="872,743 928,743" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="928.00,743.00 918.00,738.50 918.00,747.50" fill="#527baa"/>
+<polygon points="872.00,743.00 882.00,747.50 882.00,738.50" fill="#527baa"/>
+<polyline points="1218,743 1370,743" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1370.00,743.00 1360.00,738.50 1360.00,747.50" fill="#527baa"/>
+<polygon points="1218.00,743.00 1228.00,747.50 1228.00,738.50" fill="#527baa"/>
+<rect x="1238.25" y="708" width="111.5" height="26" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="1294" y="724.92" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">HTTPS / SSE</text>
+<polyline points="657,828 657,886" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="657.00,886.00 661.50,876.00 652.50,876.00" fill="#527baa"/>
+<polygon points="657.00,828.00 652.50,838.00 661.50,838.00" fill="#527baa"/>
+<rect x="713.25" y="847" width="163.5" height="27" rx="6" fill="#f0f4fa" stroke="none" stroke-width="0"/>
+<text x="795" y="864.79" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#63738a">工具调用 / 结果回填</text>
+<polyline points="442,960 386,960" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="386.00,960.00 396.00,964.50 396.00,955.50" fill="#527baa"/>
+<polygon points="442.00,960.00 432.00,955.50 432.00,964.50" fill="#527baa"/>
+<polyline points="872,960 928,960" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="928.00,960.00 918.00,955.50 918.00,964.50" fill="#527baa"/>
+<polyline points="657,1034 657,1065 1315,1065 1315,960 1370,960" fill="none" stroke="#9372b6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1370.00,960.00 1360.00,955.50 1360.00,964.50" fill="#9372b6"/>
+<rect x="951.0" y="1051" width="214.0" height="27" rx="6" fill="#f0f4fa" stroke="none" stroke-width="0"/>
+<text x="1058" y="1068.79" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#9372b6">审批后 · AgRoomScriptIPC</text>
+<polyline points="241,1034 241,1120 850,1120 850,1170" fill="none" stroke="#2d8b87" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="850.00,1170.00 854.50,1160.00 845.50,1160.00" fill="#2d8b87"/>
+<rect x="64" y="188" width="330" height="135" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="64" y="185" width="330" height="135" rx="17" fill="#edf4ff" stroke="#b6cce8" stroke-width="1.4"/>
+<rect x="65" y="207" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="87" y="230.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">AgRoom</text>
+<text x="87" y="270.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">入口 / 窗口 / 菜单栏 / 热键</text>
+<rect x="450" y="188" width="800" height="135" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="450" y="185" width="800" height="135" rx="17" fill="#edf4ff" stroke="#b6cce8" stroke-width="1.4"/>
+<rect x="451" y="207" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="473" y="230.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">AgRoomUI</text>
+<text x="473" y="268.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">SwiftUI 功能页 · ChatView · 任务中心</text>
+<text x="473" y="298.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">WKWebView 浏览器与小应用草稿由 UI 实现并注入</text>
+<rect x="1370" y="188" width="366" height="135" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="1370" y="185" width="366" height="135" rx="17" fill="#f5f0fb" stroke="#c9b8dd" stroke-width="1.4"/>
+<rect x="1371" y="207" width="4" height="30" rx="2" fill="#9372b6" stroke="none" stroke-width="0"/>
+<text x="1393" y="230.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">AgRoomDaemon</text>
+<text x="1393" y="267.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">独立进程 · 无头运行</text>
+<text x="1393" y="295.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">可恢复边界移交 · 按原空间写回</text>
+<rect x="96" y="471" width="290" height="132" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="96" y="468" width="290" height="132" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="97" y="490" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="119" y="512.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#24354a">Hub · 组合根</text>
+<text x="119" y="552.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">SpaceStore · 全局 Provider</text>
+<text x="119" y="580.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">make* 工厂 · 不缓存空间服务</text>
+<rect x="442" y="471" width="430" height="132" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="442" y="468" width="430" height="132" rx="17" fill="#ffffff" stroke="#a9bfdb" stroke-width="1.4"/>
+<rect x="443" y="490" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="465" y="513.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">EngineAssembly</text>
+<text x="465" y="552.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">冻结空间 / 工作区 / 任务范围</text>
+<text x="465" y="582.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">系统提示 + 最终工具面 + 引擎</text>
+<rect x="928" y="471" width="290" height="132" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="928" y="468" width="290" height="132" rx="17" fill="#eff8f7" stroke="#b9d9d5" stroke-width="1.4"/>
+<rect x="929" y="490" width="4" height="30" rx="2" fill="#2d8b87" stroke="none" stroke-width="0"/>
+<text x="951" y="513.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">宿主能力</text>
+<text x="951" y="542.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">foregroundApp / headless</text>
+<text x="951" y="565.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">hostTools 由 UI 显式注入</text>
+<text x="951" y="588.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">能力只收窄工具面，不授予权限</text>
+<rect x="96" y="661" width="290" height="376" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="96" y="658" width="290" height="376" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="97" y="680" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="119" y="702.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#24354a">空间领域服务</text>
+<text x="119" y="737.355" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16.5" font-weight="400" fill="#2d8b87">固定 AppSpace · 独立连接 / 目录</text>
+<polyline points="119,758 363,758" fill="none" stroke="#dce4ed" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="119" y="798.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#24354a">会话 / 智体 / 记忆</text>
+<text x="119" y="824.355" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16.5" font-weight="400" fill="#63738a">Session · Agent · Memory</text>
+<text x="119" y="873.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#24354a">知识 / 技能</text>
+<text x="119" y="899.355" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16.5" font-weight="400" fill="#63738a">Knowledge · SkillStore</text>
+<text x="119" y="948.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#24354a">邮箱 / 任务 / 产物</text>
+<text x="119" y="974.355" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16.5" font-weight="400" fill="#63738a">Mail · Task · Artifact</text>
+<text x="119" y="1016.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#2d8b87">由 Hub make* 按需创建</text>
+<rect x="442" y="661" width="430" height="170" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="442" y="658" width="430" height="170" rx="17" fill="#e8f0ff" stroke="#7fa3dc" stroke-width="1.4"/>
+<rect x="443" y="680" width="4" height="30" rx="2" fill="#3b6fbf" stroke="none" stroke-width="0"/>
+<text x="465" y="705.36" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="28" font-weight="600" fill="#24354a">DispatcherEngine</text>
+<text x="465" y="745.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">上下文 · Step / Token 预算 · 取消</text>
+<text x="465" y="774.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">权限与确认 · 挂起 / 恢复</text>
+<text x="465" y="803.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">轨迹记录 · 完成评估</text>
+<rect x="928" y="661" width="290" height="170" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="928" y="658" width="290" height="170" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="929" y="680" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="951" y="703.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">CloudProvider</text>
+<text x="951" y="743.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">统一消息 / 工具调用 / SSE</text>
+<text x="951" y="772.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">协议适配 · 有界重试</text>
+<text x="951" y="801.225" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17.5" font-weight="400" fill="#63738a">端点并发闸门</text>
+<rect x="1370" y="661" width="366" height="170" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="1370" y="658" width="366" height="170" rx="17" fill="#f0f5fc" stroke="#c7d5e7" stroke-width="1.4"/>
+<rect x="1371" y="680" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="1393" y="703.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">模型端点</text>
+<text x="1393" y="743.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">OpenAI 兼容 / Anthropic</text>
+<text x="1393" y="772.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">远端 HTTPS · 回环可用 HTTP</text>
+<text x="1393" y="801.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">SSE 流式返回正文与工具请求</text>
+<rect x="442" y="889" width="430" height="148" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="442" y="886" width="430" height="148" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="443" y="908" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="465" y="931.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">DispatcherTool</text>
+<text x="465" y="964.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">文件 · 知识 · 技能 · 邮箱 · MCP · 系统桥</text>
+<text x="465" y="990.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">Shell / Python · 统一权限与确认</text>
+<text x="465" y="1016.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">浏览器 / 小应用草稿：UI 注入</text>
+<rect x="928" y="889" width="290" height="148" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="928" y="886" width="290" height="148" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="929" y="908" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="951" y="931.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">智体与协作</text>
+<text x="951" y="962.485" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15.5" font-weight="400" fill="#63738a">AgentTool → 嵌套引擎</text>
+<text x="951" y="988.485" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15.5" font-weight="400" fill="#63738a">TeamCoordinator → DAG Workers</text>
+<text x="951" y="1014.485" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15.5" font-weight="400" fill="#63738a">继承空间 / 权限 / 预算</text>
+<rect x="1370" y="889" width="366" height="148" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="1370" y="886" width="366" height="148" rx="17" fill="#f5f0fb" stroke="#c9b8dd" stroke-width="1.4"/>
+<rect x="1371" y="908" width="4" height="30" rx="2" fill="#9372b6" stroke="none" stroke-width="0"/>
+<text x="1393" y="929.88" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="24" font-weight="600" fill="#24354a">AgRoomScriptRunner</text>
+<text x="1393" y="964.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">App Sandbox · 每次执行新进程</text>
+<text x="1393" y="990.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">每空间统一身份 · 全程离线</text>
+<text x="1393" y="1016.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">仅链接 AgRoomScriptIPC</text>
+<text x="1386" y="1073.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#9372b6">沙盒路径 · 不读取数据库或 Keychain</text>
+<text x="64" y="1152.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="600" fill="#63738a">03  本地数据与隔离</text>
+<rect x="685.75" y="1134" width="328.5" height="27" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="850" y="1151.79" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#2d8b87">GRDB · 固定发起空间 · 每个实例择一连接</text>
+<rect x="64" y="1170" width="330" height="280" rx="18" fill="#f0f3f8" stroke="#c8d2df" stroke-width="1.4"/>
+<text x="88" y="1217.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#24354a">全局配置</text>
+<text x="88" y="1260.01" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="23" font-weight="600" fill="#527baa">global.sqlite</text>
+<text x="88" y="1305.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">Provider 元数据与共享配置</text>
+<text x="88" y="1337.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">配置可跨空间复用</text>
+<polyline points="88,1363 370,1363" fill="none" stroke="#d3dce7" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="88" y="1405.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">API Key 单独存于 Keychain</text>
+<rect x="450" y="1170" width="800" height="280" rx="18" fill="#eaf5f0" stroke="#95c4b2" stroke-width="1.4"/>
+<text x="474" y="1217.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#285d4c">空间数据 · 物理隔离</text>
+<rect x="474" y="1241" width="352" height="157" rx="12" fill="#ffffff" stroke="#bbd8cc" stroke-width="1.4"/>
+<text x="492" y="1277.01" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="23" font-weight="600" fill="#285d4c">生活 · personal</text>
+<text x="492" y="1313.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#35745e">personal.sqlite</text>
+<text x="492" y="1347.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">会话 / 智体 / 记忆 / 知识 / 任务 / 邮箱</text>
+<text x="492" y="1380.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">独立技能目录，附件与产物按空间存放</text>
+<rect x="850" y="1241" width="376" height="157" rx="12" fill="#ffffff" stroke="#bbd8cc" stroke-width="1.4"/>
+<text x="868" y="1277.01" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="23" font-weight="600" fill="#285d4c">工作 · work</text>
+<text x="868" y="1313.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#35745e">work.sqlite</text>
+<text x="868" y="1347.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">会话 / 智体 / 记忆 / 知识 / 任务 / 邮箱</text>
+<text x="868" y="1380.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">独立技能目录，附件与产物按空间存放</text>
+<text x="474" y="1431.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#35745e">无跨空间查询 / 写入 API；任务始终绑定发起空间</text>
+<rect x="1370" y="1170" width="366" height="280" rx="18" fill="#fff5df" stroke="#dfc184" stroke-width="1.4"/>
+<text x="1394" y="1217.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#735924">macOS Keychain</text>
+<text x="1394" y="1265.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#735924">API Key 与连接凭据</text>
+<text x="1394" y="1300.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#8b7549">邮箱 / MCP / 数据库</text>
+<polyline points="1394,1325 1712,1325" fill="none" stroke="#e6d3a9" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1394" y="1365.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#8b7549">空间凭据按空间命名</text>
+<text x="1394" y="1405.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#8b7549">不进入数据库 / 导出 / 日志</text>
+<rect x="64" y="1490" width="403" height="47" rx="11" fill="#eaf0f7" stroke="none" stroke-width="0"/>
+<text x="265.5" y="1519.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">App / UI → Core 单向依赖</text>
+<rect x="487" y="1490" width="403" height="47" rx="11" fill="#eaf0f7" stroke="none" stroke-width="0"/>
+<text x="688.5" y="1519.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">Hub 不缓存空间服务</text>
+<rect x="910" y="1490" width="403" height="47" rx="11" fill="#eaf0f7" stroke="none" stroke-width="0"/>
+<text x="1111.5" y="1519.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">执行前统一权限与确认</text>
+<rect x="1333" y="1490" width="403" height="47" rx="11" fill="#eaf0f7" stroke="none" stroke-width="0"/>
+<text x="1534.5" y="1519.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">固定发起空间，直至任务收尾</text>
+<text x="64" y="1573.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">依据：当前工作区源码 · Package.swift · project.yml · Wiki（01 / 02 / 03 / 05）</text>
+</svg>

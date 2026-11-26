@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1580" viewBox="0 0 2000 1580" role="img" aria-labelledby="title desc">
+<title id="title">team_run 如何协作</title>
+<desc id="desc">任务计划 → DAG 调度 → 独立 Worker → 版本化产物 → 独立验证 → 摘要回主模型</desc>
+<rect width="2000" height="1580" fill="#f7f9fc"/>
+<text x="64" y="84.75999999999999" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="48" font-weight="600" fill="#24354a">team_run 如何协作</text>
+<text x="64" y="132.01" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="23" font-weight="400" fill="#63738a">任务计划 → DAG 调度 → 独立 Worker → 版本化产物 → 独立验证 → 摘要回主模型</text>
+<text x="64" y="171.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="600" fill="#527baa">团队协作路径 · 与普通 agent_* 委派分开</text>
+<rect x="64" y="470" width="1310" height="490" rx="20" fill="#eaf5f0" stroke="#98bda9" stroke-width="1.4"/>
+<text x="90" y="518.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#285d4c">DAG 示例：A、B 可并行，C 等待两者成功且提交产物</text>
+<rect x="1424" y="470" width="510" height="490" rx="20" fill="#ffffff" stroke="#bdcddd" stroke-width="1.4"/>
+<text x="1448" y="519.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">Worker 执行与权限</text>
+<polyline points="574,285 674,285" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="674.00,285.00 664.00,280.50 664.00,289.50" fill="#527baa"/>
+<polyline points="1274,285 1424,285" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1424.00,285.00 1414.00,280.50 1414.00,289.50" fill="#527baa"/>
+<polyline points="1679,380 1679,425 719,425 719,470" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="719.00,470.00 723.50,460.00 714.50,460.00" fill="#527baa"/>
+<polyline points="1679,380 1679,470" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1679.00,470.00 1683.50,460.00 1674.50,460.00" fill="#527baa"/>
+<polyline points="434,642 469,642 469,717 504,717" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="504.00,717.00 494.00,712.50 494.00,721.50" fill="#527baa"/>
+<polyline points="434,858 469,858 469,804 504,804" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="504.00,804.00 494.00,799.50 494.00,808.50" fill="#527baa"/>
+<polyline points="864,760 944,760" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="944.00,760.00 934.00,755.50 934.00,764.50" fill="#527baa"/>
+<polyline points="1144,845 1144,1005 319,1005 319,1050" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="319.00,1050.00 323.50,1040.00 314.50,1040.00" fill="#527baa"/>
+<rect x="587.5" y="983" width="263.0" height="28" rx="6" fill="#f7f9fc" stroke="none" stroke-width="0"/>
+<text x="719" y="1001.66" text-anchor="middle" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#2d8b87">全部节点成功且未取消 / 超预算</text>
+<polyline points="574,1145 674,1145" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="674.00,1145.00 664.00,1140.50 664.00,1149.50" fill="#527baa"/>
+<polyline points="1274,1145 1424,1145" fill="none" stroke="#527baa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1424.00,1145.00 1414.00,1140.50 1414.00,1149.50" fill="#527baa"/>
+<rect x="64" y="193" width="510" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="64" y="190" width="510" height="190" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="65" y="212" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="87" y="236.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">主模型调用 team_run</text>
+<text x="87" y="279.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">goal + acceptance + subtasks[DAG]</text>
+<text x="87" y="311.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">子任务说明必须自包含</text>
+<text x="87" y="343.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">团队开关开启且有启用智体时才注册</text>
+<rect x="674" y="193" width="600" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="674" y="190" width="600" height="190" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="675" y="212" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="697" y="236.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">计划确定性校验</text>
+<text x="697" y="279.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">TeamPlanPayload：模型 key → 内部 UUID</text>
+<text x="697" y="311.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">TeamPlanValidator：依赖 / 无环 / 范围 / 预算</text>
+<text x="697" y="343.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">WorkerFactory 随后解析角色 / 智体与模型</text>
+<rect x="1424" y="193" width="510" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="1424" y="190" width="510" height="190" rx="17" fill="#ffffff" stroke="#cbd7e5" stroke-width="1.4"/>
+<rect x="1425" y="212" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="1447" y="236.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">TeamCoordinator · actor</text>
+<text x="1447" y="278.965" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19.5" font-weight="400" fill="#63738a">ready set 调度与有限并发</text>
+<text x="1447" y="310.965" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19.5" font-weight="400" fill="#63738a">失败依赖 blocked；独立节点可继续</text>
+<text x="1447" y="342.965" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19.5" font-weight="400" fill="#63738a">取消 / 预算预留结算 / 绝对 deadline</text>
+<rect x="94" y="573" width="340" height="145" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="94" y="570" width="340" height="145" rx="17" fill="#ffffff" stroke="#a6c5b6" stroke-width="1.4"/>
+<rect x="95" y="592" width="4" height="30" rx="2" fill="#2d8b87" stroke="none" stroke-width="0"/>
+<text x="117" y="615.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">Worker A</text>
+<text x="117" y="651.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">独立引擎 / 历史 / 智体配置</text>
+<text x="117" y="681.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">例：收集资料</text>
+<rect x="94" y="788" width="340" height="145" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="94" y="785" width="340" height="145" rx="17" fill="#ffffff" stroke="#a6c5b6" stroke-width="1.4"/>
+<rect x="95" y="807" width="4" height="30" rx="2" fill="#2d8b87" stroke="none" stroke-width="0"/>
+<text x="117" y="830.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">Worker B</text>
+<text x="117" y="866.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">独立引擎 / 历史 / 智体配置</text>
+<text x="117" y="896.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">例：核对数据</text>
+<rect x="504" y="678" width="360" height="170" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="504" y="675" width="360" height="170" rx="17" fill="#ffffff" stroke="#a6c5b6" stroke-width="1.4"/>
+<rect x="505" y="697" width="4" height="30" rx="2" fill="#2d8b87" stroke="none" stroke-width="0"/>
+<text x="527" y="719.75" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="25" font-weight="600" fill="#24354a">TeamBlackboard</text>
+<text x="527" y="756.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">运行期内存 actor</text>
+<text x="527" y="785.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">版本化、不可变产物</text>
+<text x="527" y="814.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">上游提交后供下游使用</text>
+<rect x="944" y="678" width="400" height="170" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="944" y="675" width="400" height="170" rx="17" fill="#ffffff" stroke="#a6c5b6" stroke-width="1.4"/>
+<rect x="945" y="697" width="4" height="30" rx="2" fill="#2d8b87" stroke="none" stroke-width="0"/>
+<text x="967" y="720.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">Worker C</text>
+<text x="967" y="756.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">A / B 成功且产物提交后启动</text>
+<text x="967" y="785.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">接收任务说明 + 上游有限摘录</text>
+<text x="967" y="814.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">例：综合形成报告</text>
+<text x="504" y="588.79" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" font-weight="400" fill="#35745e">team_submit_result → 结构化摘要 / 证据 / 产物</text>
+<text x="1448" y="568.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">独立引擎 / 历史，复用智体模型配置</text>
+<text x="1448" y="605.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">文件 / 仓库 / 知识 / 记忆 / 网页只读</text>
+<text x="1448" y="642.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">team_submit_result 提交结构化结果</text>
+<polyline points="1448,671 1910,671" fill="none" stroke="#dce4ed" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1448" y="716.01" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="23" font-weight="600" fill="#735924">可选 team_write</text>
+<text x="1448" y="756.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">团队写开关 + 父权限 + 当前工作区</text>
+<text x="1448" y="792.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">任务板逐次审批 → 路径租约 → 内容重验</text>
+<text x="1448" y="828.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">写快照 → 原子写 → 支持回滚</text>
+<text x="1448" y="864.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">不开放 Shell / 技能脚本 / 邮箱写</text>
+<text x="1448" y="900.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">无浏览器 / ask_user / 递归委派入口</text>
+<rect x="64" y="1053" width="510" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="64" y="1050" width="510" height="190" rx="17" fill="#edf4ff" stroke="#b3c9e6" stroke-width="1.4"/>
+<rect x="65" y="1072" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="87" y="1095.62" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="600" fill="#24354a">独立验证者 TeamVerifier</text>
+<text x="87" y="1139.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">宿主证据核验 + 无工具模型判断</text>
+<text x="87" y="1171.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">独立上下文，按 goal / acceptance 验收</text>
+<text x="87" y="1203.53" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" font-weight="400" fill="#63738a">通过才 completed；失败 / 超预算为 failed</text>
+<rect x="674" y="1053" width="600" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="674" y="1050" width="600" height="190" rx="17" fill="#edf4ff" stroke="#b3c9e6" stroke-width="1.4"/>
+<rect x="675" y="1072" width="4" height="30" rx="2" fill="#527baa" stroke="none" stroke-width="0"/>
+<text x="697" y="1096.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">TeamTaskReport → digest</text>
+<text x="697" y="1140.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">结构化摘要 / 证据 / 产物引用与摘录</text>
+<text x="697" y="1172.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">失败保留部分结果，依赖失败节点被阻断</text>
+<text x="697" y="1204.4" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="20" font-weight="400" fill="#63738a">主对话仅收有界 digest，继续主模型回合</text>
+<rect x="1424" y="1053" width="510" height="190" rx="17" fill="#e9eef5" stroke="none" stroke-width="0"/>
+<rect x="1424" y="1050" width="510" height="190" rx="17" fill="#f5f0fb" stroke="#c9b8dd" stroke-width="1.4"/>
+<rect x="1425" y="1072" width="4" height="30" rx="2" fill="#9372b6" stroke="none" stroke-width="0"/>
+<text x="1447" y="1096.49" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="600" fill="#24354a">任务板与落盘</text>
+<text x="1447" y="1127.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">team_tasks：启动 / 节点完成 / 终态快照</text>
+<text x="1447" y="1155.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">TeamProgressCenter：内存最近动作</text>
+<text x="1447" y="1183.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">team_writes：写快照与回滚</text>
+<text x="1447" y="1211.095" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18.5" font-weight="400" fill="#63738a">快照可回看；重启不自动续跑</text>
+<rect x="64" y="1315" width="1870" height="150" rx="16" fill="#fff5df" stroke="#dfc184" stroke-width="1.4"/>
+<text x="88" y="1358.88" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="24" font-weight="600" fill="#735924">预算边界：两条路径不同</text>
+<text x="88" y="1403.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="600" fill="#735924">agent_* 普通委派</text>
+<text x="500" y="1403.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#8b7549">共享主任务 Token / 工具账本，子引擎另有局部 Step 上限。</text>
+<text x="88" y="1440.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="600" fill="#735924">team_run 团队</text>
+<text x="500" y="1440.27" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="21" font-weight="400" fill="#8b7549">协调器新建团队账本，Worker / 验证者共享，并预留验证额度。</text>
+<text x="64" y="1511.66" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#63738a">显式重试创建新的 taskID / runID / 账本，通过 parentTaskID 关联原任务；Worker 中间轨迹不注入主对话上下文。</text>
+<text x="64" y="1553.92" text-anchor="start" font-family="Arial Unicode MS, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#63738a">源码依据：TeamRunTool · TeamPlanValidator · TeamCoordinator · TeamWorker · TeamBlackboard · TeamVerifier · TeamTaskStore</text>
+</svg>

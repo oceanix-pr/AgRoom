@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key><string>com.agroom.mail-reference</string>
+			<key>CFBundleURLSchemes</key><array><string>agroom-mail</string></array>
+			<key>CFBundleTypeRole</key><string>Viewer</string>
+		</dict>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- 本地 LLM 服务（Ollama / LM Studio）需要访问局域网 HTTP 端点；
+		     loopback（localhost/127.0.0.1）本身已豁免 ATS -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+</dict>
+</plist>

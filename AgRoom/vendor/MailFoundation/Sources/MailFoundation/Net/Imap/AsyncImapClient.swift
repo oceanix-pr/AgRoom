@@ -1,0 +1,600 @@
+//
+// Author: Jeffrey Stedfast <jestedfa@microsoft.com>
+//
+// Copyright (c) 2013-2026 .NET Foundation and Contributors
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+//
+// AsyncImapClient.swift
+//
+// Async IMAP client backed by AsyncTransport.
+//
+
+import Foundation
+
+@available(macOS 10.15, iOS 13.0, *)
+public actor AsyncImapClient {
+    private enum PendingCommand {
+        case login
+        case authenticate
+        case select
+        case examine
+        case close
+        case logout
+    }
+
+    private let transport: AsyncTransport
+    private let queue = AsyncQueue<[UInt8]>()
+    private var readerTask: Task<Void, Never>?
+    private var literalDecoder = ImapLiteralDecoder()
+    private var tagGenerator = ImapTagGenerator()
+    private var pending: [String: PendingCommand] = [:]
+    private var pendingReadChunks: [[UInt8]] = []
+    private var enabledCapabilities: Set<String> = []
+    private var utf8Enabled = false
+    private var qresyncEnabled = false
+    private let detector = ImapAuthenticationSecretDetector()
+
+    private func resetEnabledState() {
+        enabledCapabilities.removeAll(keepingCapacity: true)
+        utf8Enabled = false
+        qresyncEnabled = false
+    }
+
+    public enum State: Sendable {
+        case disconnected
+        case connected
+        case authenticating
+        case authenticated
+        case selected
+    }
+
+    public private(set) var state: State = .disconnected
+    public private(set) var capabilities: ImapCapabilities?
+    public private(set) var capabilitiesVersion: Int = 0
+    public var protocolLogger: ProtocolLoggerType {
+        didSet {
+            protocolLogger.authenticationSecretDetector = detector
+        }
+    }
+
+    public var isDisconnected: Bool {
+        state == .disconnected
+    }
+
+    /// Returns true if the decoder has pending data (partial message or literal in progress).
+    /// This can be used to distinguish between "no messages ready" and "still receiving data".
+    public var hasPendingData: Bool {
+        literalDecoder.hasPendingData
+    }
+
+    /// Sets the protocol logger for debugging.
+    public func setProtocolLogger(_ logger: sending ProtocolLoggerType) {
+        self.protocolLogger = logger
+    }
+
+    public init(transport: AsyncTransport, protocolLogger: ProtocolLoggerType = NullProtocolLogger()) {
+        self.transport = transport
+        self.protocolLogger = protocolLogger
+        self.protocolLogger.authenticationSecretDetector = detector
+    }
+
+    public func start() async throws {
+        try await transport.start()
+        resetEnabledState()
+        state = .connected
+        readerTask = Task {
+            for await chunk in transport.incoming {
+                await queue.enqueue(chunk)
+            }
+            self.setDisconnected()
+            await queue.finish()
+        }
+    }
+
+    /// Starts the client with implicit TLS enabled (for IMAPS on port 993).
+    ///
+    /// This method configures TLS before establishing the connection, which is
+    /// required for implicit TLS where encryption starts immediately.
+    ///
+    /// - Parameter validateCertificate: Whether to validate the server certificate.
+    /// - Throws: An error if the transport does not support implicit TLS or the connection fails.
+    public func startSecure(validateCertificate: Bool = true) async throws {
+        func finishStart() {
+            resetEnabledState()
+            state = .connected
+            readerTask = Task {
+                for await chunk in transport.incoming {
+                    await queue.enqueue(chunk)
+                }
+                self.setDisconnected()
+                await queue.finish()
+            }
+        }
+
+        #if canImport(Network)
+        if let networkTransport = transport as? NetworkTransport {
+            try await networkTransport.startSecure(validateCertificate: validateCertificate)
+            finishStart()
+            return
+        }
+        #endif
+
+        #if !os(iOS)
+        if let socketTransport = transport as? SocketTransport {
+            try await socketTransport.startSecure(validateCertificate: validateCertificate)
+            finishStart()
+            return
+        }
+        #endif
+
+        #if canImport(COpenSSL)
+        if let openSSLTransport = transport as? OpenSSLTransport {
+            try await openSSLTransport.startSecure(validateCertificate: validateCertificate)
+            finishStart()
+            return
+        }
+        #endif
+
+        throw AsyncTransportError.connectionFailed
+    }
+
+    private func setDisconnected() {
+        resetEnabledState()
+        state = .disconnected
+    }
+
+    public func stop() async {
+        readerTask?.cancel()
+        readerTask = nil
+        await transport.stop()
+        await queue.finish()
+        resetEnabledState()
+        state = .disconnected
+    }
+
+    public func makeCommand(_ kind: ImapCommandKind) -> ImapCommand {
+        let tag = tagGenerator.nextTag()
+        return kind.command(tag: tag)
+    }
+
+    private func encodeMailboxNameForWire(_ mailbox: String) -> String {
+        guard !utf8Enabled else { return mailbox }
+        return ImapMailboxEncoding.encode(mailbox)
+    }
+
+    private func prepareCommandForWire(_ kind: ImapCommandKind) -> ImapCommandKind {
+        switch kind {
+        case let .select(mailbox):
+            return .select(encodeMailboxNameForWire(mailbox))
+        case let .examine(mailbox):
+            return .examine(encodeMailboxNameForWire(mailbox))
+        case let .create(mailbox):
+            return .create(encodeMailboxNameForWire(mailbox))
+        case let .delete(mailbox):
+            return .delete(encodeMailboxNameForWire(mailbox))
+        case let .rename(from, to):
+            return .rename(encodeMailboxNameForWire(from), encodeMailboxNameForWire(to))
+        case let .subscribe(mailbox):
+            return .subscribe(encodeMailboxNameForWire(mailbox))
+        case let .unsubscribe(mailbox):
+            return .unsubscribe(encodeMailboxNameForWire(mailbox))
+        case let .list(reference, mailbox):
+            return .list(encodeMailboxNameForWire(reference), encodeMailboxNameForWire(mailbox))
+        case let .listExtended(reference, mailbox, returns):
+            return .listExtended(
+                encodeMailboxNameForWire(reference),
+                encodeMailboxNameForWire(mailbox),
+                returns: returns
+            )
+        case let .listSpecialUse(reference, mailbox):
+            return .listSpecialUse(encodeMailboxNameForWire(reference), encodeMailboxNameForWire(mailbox))
+        case let .listStatus(reference, mailbox, items):
+            return .listStatus(
+                encodeMailboxNameForWire(reference),
+                encodeMailboxNameForWire(mailbox),
+                items: items
+            )
+        case let .lsub(reference, mailbox):
+            return .lsub(encodeMailboxNameForWire(reference), encodeMailboxNameForWire(mailbox))
+        case let .xlist(reference, mailbox):
+            return .xlist(encodeMailboxNameForWire(reference), encodeMailboxNameForWire(mailbox))
+        case let .status(mailbox, items):
+            return .status(encodeMailboxNameForWire(mailbox), items: items)
+        case let .getQuotaRoot(mailbox):
+            return .getQuotaRoot(encodeMailboxNameForWire(mailbox))
+        case let .getAcl(mailbox):
+            return .getAcl(encodeMailboxNameForWire(mailbox))
+        case let .setAcl(mailbox, identifier, rights):
+            return .setAcl(encodeMailboxNameForWire(mailbox), identifier: identifier, rights: rights)
+        case let .listRights(mailbox, identifier):
+            return .listRights(encodeMailboxNameForWire(mailbox), identifier: identifier)
+        case let .myRights(mailbox):
+            return .myRights(encodeMailboxNameForWire(mailbox))
+        case let .getMetadata(mailbox, options, entries):
+            return .getMetadata(encodeMailboxNameForWire(mailbox), options: options, entries: entries)
+        case let .setMetadata(mailbox, entries):
+            return .setMetadata(encodeMailboxNameForWire(mailbox), entries: entries)
+        case let .getAnnotation(mailbox, entries, attributes):
+            return .getAnnotation(encodeMailboxNameForWire(mailbox), entries: entries, attributes: attributes)
+        case let .setAnnotation(mailbox, entry, attributes):
+            return .setAnnotation(encodeMailboxNameForWire(mailbox), entry: entry, attributes: attributes)
+        case let .copy(set, mailbox):
+            return .copy(set, encodeMailboxNameForWire(mailbox))
+        case let .move(set, mailbox):
+            return .move(set, encodeMailboxNameForWire(mailbox))
+        case let .uidCopy(set, mailbox):
+            return .uidCopy(set, encodeMailboxNameForWire(mailbox))
+        case let .uidMove(set, mailbox):
+            return .uidMove(set, encodeMailboxNameForWire(mailbox))
+        default:
+            return kind
+        }
+    }
+
+    func markEnabledCapabilities(_ capabilities: [String]) {
+        for capability in capabilities {
+            let upper = capability.uppercased()
+            enabledCapabilities.insert(upper)
+            if upper == "UTF8=ACCEPT" {
+                utf8Enabled = true
+            } else if upper == "QRESYNC" {
+                qresyncEnabled = true
+            }
+        }
+    }
+
+    @discardableResult
+    public func send(_ kind: ImapCommandKind) async throws -> ImapCommand {
+        let command = makeCommand(prepareCommandForWire(kind))
+        switch kind {
+        case .login:
+            state = .authenticating
+            pending[command.tag] = .login
+        case .authenticate:
+            state = .authenticating
+            pending[command.tag] = .authenticate
+        case .select:
+            pending[command.tag] = .select
+        case .examine:
+            pending[command.tag] = .examine
+        case .close:
+            pending[command.tag] = .close
+        case .logout:
+            pending[command.tag] = .logout
+        default:
+            break
+        }
+        _ = try await send(command)
+        return command
+    }
+
+    @discardableResult
+    public func send(_ command: ImapCommand) async throws -> [UInt8] {
+        let bytes = Array(command.serialized.utf8)
+        if let literalParts = ImapLiteralCommandParts.parse(bytes) {
+            try await sendCommandWithLiterals(literalParts)
+        } else {
+            try await writeCommandChunk(bytes)
+        }
+        return bytes
+    }
+
+    public func sendLiteral(_ bytes: [UInt8]) async throws {
+        protocolLogger.logClient(bytes, offset: 0, count: bytes.count)
+        try await transport.send(bytes)
+    }
+
+    private func writeCommandChunk(_ bytes: [UInt8]) async throws {
+        protocolLogger.logClient(bytes, offset: 0, count: bytes.count)
+        try await transport.send(bytes)
+    }
+
+    private func canUseNonSynchronizingLiteral(length: Int) -> Bool {
+        guard let capabilities else { return false }
+        if capabilities.supports("LITERAL+") {
+            return true
+        }
+        return length <= 4096 && capabilities.supports("LITERAL-")
+    }
+
+    private enum LiteralContinuationResult {
+        case continuation
+        case tagged
+        case disconnected
+    }
+
+    private func waitForLiteralContinuation() async -> LiteralContinuationResult {
+        var decoder = ImapResponseDecoder()
+
+        while true {
+            let chunk = await queue.dequeue()
+            guard let chunk else {
+                state = .disconnected
+                return .disconnected
+            }
+
+            pendingReadChunks.append(chunk)
+            let responses = decoder.append(chunk)
+
+            for response in responses {
+                if case .continuation = response.kind {
+                    return .continuation
+                }
+
+                if case .tagged = response.kind {
+                    return .tagged
+                }
+            }
+        }
+    }
+
+    private func sendCommandWithLiterals(_ literalParts: (parts: [ImapSerializedLiteralPart], tail: [UInt8])) async throws {
+        for part in literalParts.parts {
+            let usePlus = canUseNonSynchronizingLiteral(length: part.length)
+            var header = part.leading
+            header.append(contentsOf: Array("{\(part.length)\(usePlus ? "+" : "")}\r\n".utf8))
+            try await writeCommandChunk(header)
+
+            if !usePlus {
+                switch await waitForLiteralContinuation() {
+                case .continuation:
+                    break
+                case .tagged:
+                    // The command was rejected before continuation; do not send literal data.
+                    return
+                case .disconnected:
+                    throw AsyncTransportError.connectionFailed
+                }
+            }
+
+            try await writeCommandChunk(part.literal)
+        }
+
+        if !literalParts.tail.isEmpty {
+            try await writeCommandChunk(literalParts.tail)
+        }
+    }
+
+    public func nextMessages() async -> [ImapLiteralMessage] {
+        let chunk: [UInt8]
+        if !pendingReadChunks.isEmpty {
+            chunk = pendingReadChunks.removeFirst()
+        } else {
+            let next = await queue.dequeue()
+            guard let next else {
+                debugLog("[nextMessages] queue returned nil (finished)")
+                // Mark as disconnected so fetch loops can detect connection loss
+                state = .disconnected
+                return []
+            }
+            chunk = next
+        }
+        debugLog("[nextMessages] received chunk of \(chunk.count) bytes")
+        protocolLogger.logServer(chunk, offset: 0, count: chunk.count)
+        let messages = literalDecoder.append(chunk)
+        debugLog("[nextMessages] literalDecoder returned \(messages.count) messages")
+        for (index, message) in messages.enumerated() {
+            debugLog("[nextMessages] message[\(index)]: line='\(message.line.prefix(80))...' suffix='...\(message.line.suffix(30))' len=\(message.line.count) hasResponse=\(message.response != nil)")
+            if let enabled = ImapEnabledResponse.parse(message.line) {
+                markEnabledCapabilities(enabled.capabilities)
+            }
+            if let response = message.response {
+                debugLog("[nextMessages] message[\(index)]: kind=\(response.kind) status=\(String(describing: response.status))")
+                handleResponse(response)
+            }
+            if let parsed = ImapCapabilities.parse(from: message.line) {
+                capabilities = parsed
+                capabilitiesVersion += 1
+            }
+        }
+        return messages
+    }
+
+    private func debugLog(_ message: String) {
+        MailFoundationLogging.debug(.imapClient, message)
+    }
+
+    public func waitForContinuation() async -> ImapResponse? {
+        while true {
+            let messages = await nextMessages()
+            if messages.isEmpty {
+                return nil
+            }
+            for message in messages {
+                if let response = message.response, case .continuation = response.kind {
+                    return response
+                }
+            }
+        }
+    }
+
+    public func waitForTagged(_ tag: String) async -> ImapResponse? {
+        while true {
+            let messages = await nextMessages()
+            if messages.isEmpty {
+                return nil
+            }
+            for message in messages {
+                if let response = message.response {
+                    if case let .tagged(foundTag) = response.kind, foundTag == tag {
+                        return response
+                    }
+                }
+            }
+        }
+    }
+
+    public func capability() async throws -> ImapResponse? {
+        let command = makeCommand(.capability)
+        _ = try await send(command)
+        return await waitForTagged(command.tag)
+    }
+
+    public func login(user: String, password: String) async throws -> ImapResponse? {
+        detector.isAuthenticating = true
+        defer { detector.isAuthenticating = false }
+        let command = try await send(.login(user, password))
+        let response = await waitForTagged(command.tag)
+        if response?.status == .ok {
+            state = .authenticated
+        } else if response != nil {
+            state = .connected
+        }
+        return response
+    }
+
+    /// Authenticates using SASL mechanism
+    public func authenticate(_ auth: ImapAuthentication) async throws -> ImapResponse? {
+        let initialCapabilitiesVersion = capabilitiesVersion
+        let supportsSaslIr = capabilities?.supports("SASL-IR") ?? false
+        let initialResponse = supportsSaslIr ? auth.initialResponse : nil
+        var pendingInitialResponse = supportsSaslIr ? nil : auth.initialResponse
+        detector.isAuthenticating = true
+        defer { detector.isAuthenticating = false }
+        let command = try await send(.authenticate(auth.mechanism, initialResponse: initialResponse))
+
+        // Handle challenge-response if needed
+        if auth.responder != nil || pendingInitialResponse != nil {
+            while true {
+                let messages = await nextMessages()
+                if messages.isEmpty {
+                    throw AsyncTransportError.connectionFailed
+                }
+                for message in messages {
+                    if let response = message.response {
+                        // Check for tagged response (success or failure)
+                        if case let .tagged(tag) = response.kind, tag == command.tag {
+                            if response.status == .ok {
+                                state = .authenticated
+                            } else {
+                                state = .connected
+                            }
+                            if response.status == .ok, capabilitiesVersion == initialCapabilitiesVersion {
+                                _ = try? await capability()
+                            }
+                            return response
+                        }
+                        // Check for continuation request
+                        if case .continuation = response.kind {
+                            let challenge = response.text
+                            let responseData: String
+                            if let initial = pendingInitialResponse {
+                                responseData = initial
+                                pendingInitialResponse = nil
+                            } else if let responder = auth.responder {
+                                responseData = try responder(challenge)
+                            } else {
+                                responseData = ""
+                            }
+                            if responseData.isEmpty {
+                                // Empty response for final verification
+                                try await sendLiteral(Array("\r\n".utf8))
+                            } else {
+                                try await sendLiteral(Array("\(responseData)\r\n".utf8))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // No responder - just wait for tagged response
+        let response = await waitForTagged(command.tag)
+        if response == nil {
+            throw AsyncTransportError.connectionFailed
+        }
+        if response?.status == .ok {
+            state = .authenticated
+        } else if response != nil {
+            state = .connected
+        }
+        if response?.status == .ok, capabilitiesVersion == initialCapabilitiesVersion {
+            _ = try? await capability()
+        }
+        return response
+    }
+
+    public func select(mailbox: String) async throws -> ImapResponse? {
+        let command = try await send(.select(mailbox))
+        let response = await waitForTagged(command.tag)
+        if response?.status == .ok {
+            state = .selected
+        }
+        return response
+    }
+
+    public func close() async throws -> ImapResponse? {
+        let command = try await send(.close)
+        let response = await waitForTagged(command.tag)
+        if response?.status == .ok {
+            state = .authenticated
+        }
+        return response
+    }
+
+    public func logout() async throws -> ImapResponse? {
+        let command = try await send(.logout)
+        let response = await waitForTagged(command.tag)
+        if response?.status == .ok || response?.status == .bye {
+            resetEnabledState()
+            state = .disconnected
+        }
+        return response
+    }
+
+    private func handleResponse(_ response: ImapResponse) {
+        if case .untagged = response.kind {
+            if response.status == .preauth {
+                state = .authenticated
+            } else if response.status == .bye {
+                resetEnabledState()
+                state = .disconnected
+            }
+            return
+        }
+
+        if case let .tagged(tag) = response.kind, let pending = pending.removeValue(forKey: tag) {
+            switch pending {
+            case .login, .authenticate:
+                state = response.status == .ok ? .authenticated : .connected
+            case .select, .examine:
+                if response.status == .ok {
+                    state = .selected
+                }
+            case .close:
+                if response.status == .ok {
+                    state = .authenticated
+                }
+            case .logout:
+                if response.status == .ok || response.status == .bye {
+                    resetEnabledState()
+                    state = .disconnected
+                }
+            }
+            return
+        }
+
+        if state == .authenticating, response.status == .ok {
+            state = .authenticated
+        }
+    }
+}

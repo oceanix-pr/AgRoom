@@ -1,0 +1,42 @@
+%% team_run 的当前团队路径；与 AgentTool 普通委派分开。
+%% 实现依据：TeamRunTool、TeamCoordinator、TeamWorker、TeamBlackboard、TeamVerifier。
+flowchart TB
+    Main["主模型调用 team_run<br/>goal + acceptance + subtasks[DAG]<br/>仅团队开关打开且有启用智体时注册"]
+    Validator["TeamPlanPayload / TeamPlanValidator<br/>key → UUID<br/>校验依赖、无环、范围与预算<br/>WorkerFactory 随后解析智体与模型"]
+    Coordinator["TeamCoordinator · 每个任务一个 actor<br/>维护 ready / running / succeeded / blocked<br/>有限并发、任务取消与绝对 deadline<br/>新建团队 ExecutionBudgetLedger"]
+    Main --> Validator --> Coordinator
+    subgraph DAG["示例依赖：A 与 B 可并行，C 等待两者成功且产物已提交"]
+        A["Worker A · 独立 DispatcherEngine<br/>一个子任务 / 独立历史 / 智体配置"]
+        B["Worker B · 独立 DispatcherEngine<br/>一个子任务 / 独立历史 / 智体配置"]
+        Board["TeamBlackboard · 运行期内存 actor<br/>不可变、版本化产物<br/>下游只收到引用与有限摘录"]
+        C["Worker C · 独立 DispatcherEngine<br/>只接收任务说明与上游产物摘录<br/>依赖满足后启动"]
+        A -->|"team_submit_result"| Board
+        B -->|"team_submit_result"| Board
+        Board -->|"A / B 成功并提交后"| C
+    end
+    Coordinator --> A
+    Coordinator --> B
+    C -->|"结构化结果与产物"| Coordinator
+    Board -. "保留可复用产物" .-> Coordinator
+    Policy["Worker 能力与预算<br/>AgentProviderResolver 复用智体 Provider / 模型配置<br/>默认只读；无 Shell / 技能脚本 / 邮箱写 / 浏览器 / ask_user<br/>无 agent_* / team_run 递归入口<br/>团队内 Worker 与验证者共享团队账本<br/>此账本不直接复用主对话的账本"]
+    Coordinator -.-> Policy
+    Write["可选 team_write<br/>团队写开关 + 父权限 + 当前工作区<br/>任务板逐次审批 → 路径租约 → 内容重验<br/>写快照 → 原子写；支持回滚<br/>权限最高 workspaceWrite；Daemon 禁用团队写"]
+    Policy -. "显式启用后" .-> Write
+    Verify["独立验证者 TeamVerifier<br/>所有节点成功且未取消 / 超预算才进入<br/>独立上下文核对目标、验收标准与产物<br/>验证预算预先保留"]
+    Coordinator --> Verify
+    Report["TeamTaskReport<br/>验证通过：completed<br/>验证失败 / 格式错误 / 超预算：failed<br/>节点失败阻断依赖，独立节点可继续；保留部分结果"]
+    Verify --> Report
+    Coordinator -->|"失败 / 取消 / 部分结果"| Report
+    Digest["digest → 父 toolResult → 主模型综合<br/>主对话只收到有界摘要与产物摘录<br/>Worker 中间轨迹不注入主对话上下文"]
+    Report --> Digest
+    UI["当前空间任务板<br/>team_tasks：启动 / 子任务结束 / 最终报告快照<br/>TeamProgressCenter：进程内最近工具进度<br/>team_writes：写快照与回滚<br/>快照供回看，重启不自动续跑"]
+    Coordinator -. "报告快照 / 最近动作" .-> UI
+    Report --> UI
+    Write --> UI
+
+    classDef flow fill:#edf4ff,stroke:#9bb7df,color:#23436d;
+    classDef worker fill:#eaf5f0,stroke:#8cbaa7,color:#285d4c;
+    classDef policy fill:#fff5df,stroke:#d8b978,color:#735924;
+    class Main,Validator,Coordinator,Verify,Report,Digest flow;
+    class A,B,C,Board worker;
+    class Policy,Write,UI policy;

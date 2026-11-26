@@ -1,0 +1,6 @@
+Notes functionality is adapted from Memonta (MIT), with integration into AgRoom's space storage, providers, approvals and localization.
+WhisperKit / argmax-oss-swift 0.18.0: MIT, https://github.com/argmaxinc/argmax-oss-swift
+sherpa-onnx commit 1cb484af5e69d3c7803c1eb0b3b5ab8041e0e911: Apache-2.0, https://github.com/k2-fsa/sherpa-onnx
+ONNX Runtime 1.27.1: MIT, https://github.com/microsoft/onnxruntime
+ONNXRuntime-ThirdPartyNotices.txt comes from the verified macOS arm64 distribution of the same version, https://github.com/csukuangfj/onnxruntime-libs/releases/tag/v1.27.1 (upstream commit df2ba1cf8108aa63627cf4cdf8f807880b938616).
+Downloaded model weights retain their upstream licenses and are not distributed in the application bundle.

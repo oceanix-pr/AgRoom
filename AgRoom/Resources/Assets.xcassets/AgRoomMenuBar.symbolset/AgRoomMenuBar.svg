@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 3300 2200">
+  <!-- Outlined from the central robot in AppIcon; the orbit and its nodes are omitted.
+       Eye contours wind opposite to the silhouette so they stay transparent. -->
+  <g id="Notes" font-family="sans-serif" font-size="13">
+    <text id="template-version" x="3036" y="1933">Template v.2.0</text>
+    <text id="descriptive-name" x="263" y="1969">AgRoom menu bar robot</text>
+  </g>
+  <g id="Guides" fill="none" stroke="#27AAE1" stroke-width="0.5">
+    <line id="Baseline-S" x1="263" y1="696" x2="3036" y2="696"/>
+    <line id="Capline-S" x1="263" y1="625.54" x2="3036" y2="625.54"/>
+    <line id="Baseline-M" x1="263" y1="1126" x2="3036" y2="1126"/>
+    <line id="Capline-M" x1="263" y1="1055.54" x2="3036" y2="1055.54"/>
+    <line id="Baseline-L" x1="263" y1="1556" x2="3036" y2="1556"/>
+    <line id="Capline-L" x1="263" y1="1485.54" x2="3036" y2="1485.54"/>
+    <line id="left-margin-Regular-M" x1="1405.68" y1="1030" x2="1405.68" y2="1140"/>
+    <line id="right-margin-Regular-M" x1="1494" y1="1030" x2="1494" y2="1140"/>
+  </g>
+  <g id="Symbols">
+    <g id="Regular-M" transform="matrix(1 0 0 1 1405.68 1126)">
+      <path fill="black" d="M29.88-57.76H38.76C40.085-57.76 41.16-58.835 41.16-60.16V-71.321C39.017-72.405 37.56-74.63 37.56-77.2C37.56-80.845 40.515-83.8 44.16-83.8C47.805-83.8 50.76-80.845 50.76-77.2C50.76-74.63 49.303-72.405 47.16-71.321V-60.16C47.16-58.835 48.235-57.76 49.56-57.76H58.44C74.942-57.76 88.32-44.382 88.32-27.88C88.32-11.378 74.942 2 58.44 2H29.88C13.378 2 0-11.378 0-27.88C0-44.382 13.378-57.76 29.88-57.76ZM25.8-38.56C22.552-38.56 19.92-35.928 19.92-32.68V-23.08C19.92-19.832 22.552-17.2 25.8-17.2C29.048-17.2 31.68-19.832 31.68-23.08V-32.68C31.68-35.928 29.048-38.56 25.8-38.56ZM62.64-38.56C59.392-38.56 56.76-35.928 56.76-32.68V-23.08C56.76-19.832 59.392-17.2 62.64-17.2C65.888-17.2 68.52-19.832 68.52-23.08V-32.68C68.52-35.928 65.888-38.56 62.64-38.56Z"/>
+    </g>
+  </g>
+</svg>

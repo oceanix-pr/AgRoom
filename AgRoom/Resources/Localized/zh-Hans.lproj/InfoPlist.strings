@@ -1,0 +1,7 @@
+/* 应用显示名（简体中文） */
+"CFBundleDisplayName" = "阿吉屋";
+"CFBundleName" = "阿吉屋";
+
+"NSMicrophoneUsageDescription" = "阿吉屋使用麦克风为笔记录制音频。";
+"NSSpeechRecognitionUsageDescription" = "阿吉屋使用系统语音识别将音频转为笔记文字，音频可能发送至 Apple 处理。";
+"NSRemindersFullAccessUsageDescription" = "阿吉屋在系统提醒事项中创建和跟踪待办事项。";

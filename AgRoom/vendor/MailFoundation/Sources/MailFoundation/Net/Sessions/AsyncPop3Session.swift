@@ -1,0 +1,818 @@
+//
+// Author: Jeffrey Stedfast <jestedfa@microsoft.com>
+//
+// Copyright (c) 2013-2026 .NET Foundation and Contributors
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+//
+// AsyncPop3Session.swift
+//
+// Higher-level async POP3 session helpers.
+//
+
+/// Default timeout for POP3 operations in milliseconds (2 minutes, matching MailKit).
+public let defaultPop3TimeoutMs = 120_000
+
+/// A higher-level asynchronous POP3 session that manages protocol interactions.
+///
+/// `AsyncPop3Session` wraps the low-level ``AsyncPop3Client`` to provide a convenient
+/// async/await API for POP3 operations. It handles response waiting, error
+/// conversion, and multiline response parsing.
+///
+/// ## Overview
+///
+/// This actor provides methods for all standard POP3 operations:
+/// - Connection and authentication
+/// - Message listing (STAT, LIST, UIDL)
+/// - Message retrieval (RETR, TOP)
+/// - Message management (DELE, RSET, NOOP)
+/// - Capabilities query (CAPA)
+/// - TLS upgrade (STLS)
+///
+/// ## Usage
+///
+/// For most use cases, prefer ``AsyncPop3MailStore`` which provides a higher-level
+/// abstraction. Use `AsyncPop3Session` directly when you need more control over
+/// the protocol interactions.
+///
+/// ```swift
+/// let session = try AsyncPop3Session.make(host: "pop.example.com", port: 995, backend: .tls)
+///
+/// // Connect and authenticate
+/// _ = try await session.connect()
+/// _ = try await session.authenticate(user: "user@example.com", password: "secret")
+///
+/// // Get mailbox status
+/// let stat = try await session.stat()
+/// print("Messages: \(stat.count)")
+///
+/// // Retrieve a message
+/// let messageData = try await session.retrData(1)
+/// let message = try messageData.message()
+///
+/// // Clean up
+/// await session.disconnect()
+/// ```
+///
+/// ## Thread Safety
+///
+/// This class is implemented as an actor, providing inherent thread safety
+/// for concurrent access within Swift's structured concurrency model.
+///
+/// ## See Also
+///
+/// - ``AsyncPop3MailStore`` for high-level mail store operations
+/// - ``Pop3Session`` for synchronous operations
+/// - ``AsyncPop3Client`` for low-level protocol access
+@available(macOS 10.15, iOS 13.0, *)
+public actor AsyncPop3Session {
+    private let client: AsyncPop3Client
+    private let transport: AsyncTransport
+    private var lastGreeting: Pop3Response?
+
+    /// The timeout for network operations in milliseconds.
+    ///
+    /// Default is 120000 (2 minutes), matching MailKit's default.
+    /// Set to `Int.max` for no timeout.
+    public private(set) var timeoutMilliseconds: Int = defaultPop3TimeoutMs
+
+    /// Sets the timeout for network operations.
+    ///
+    /// - Parameter milliseconds: The timeout in milliseconds.
+    public func setTimeoutMilliseconds(_ milliseconds: Int) {
+        timeoutMilliseconds = milliseconds
+    }
+
+    /// Initializes a new async POP3 session.
+    ///
+    /// - Parameters:
+    ///   - transport: The async transport to use for communication.
+    ///   - timeoutMilliseconds: The timeout for network operations.
+    public init(transport: AsyncTransport, timeoutMilliseconds: Int = defaultPop3TimeoutMs) {
+        self.transport = transport
+        self.client = AsyncPop3Client(transport: transport)
+        self.timeoutMilliseconds = timeoutMilliseconds
+    }
+
+    /// Creates a new async POP3 session with the specified connection parameters.
+    ///
+    /// - Parameters:
+    ///   - host: The hostname of the POP3 server.
+    ///   - port: The port number.
+    ///   - backend: The async transport backend to use.
+    ///   - timeoutMilliseconds: The timeout for network operations.
+    /// - Returns: A configured session ready for connection.
+    /// - Throws: An error if the transport cannot be created.
+    public static func make(
+        host: String,
+        port: UInt16,
+        backend: AsyncTransportBackend = .network,
+        timeoutMilliseconds: Int = defaultPop3TimeoutMs
+    ) throws -> AsyncPop3Session {
+        let transport = try AsyncTransportFactory.make(host: host, port: port, backend: backend)
+        return AsyncPop3Session(transport: transport, timeoutMilliseconds: timeoutMilliseconds)
+    }
+
+    /// Creates a new async POP3 session with proxy support.
+    ///
+    /// - Parameters:
+    ///   - host: The hostname of the POP3 server.
+    ///   - port: The port number.
+    ///   - backend: The async transport backend to use.
+    ///   - proxy: The proxy settings for the connection.
+    ///   - timeoutMilliseconds: The timeout for network operations.
+    /// - Returns: A configured session ready for connection.
+    /// - Throws: An error if the transport cannot be created.
+    public static func make(
+        host: String,
+        port: UInt16,
+        backend: AsyncTransportBackend = .network,
+        proxy: ProxySettings,
+        timeoutMilliseconds: Int = defaultPop3TimeoutMs
+    ) async throws -> AsyncPop3Session {
+        let transport = try await AsyncTransportFactory.make(host: host, port: port, backend: backend, proxy: proxy)
+        return AsyncPop3Session(transport: transport, timeoutMilliseconds: timeoutMilliseconds)
+    }
+
+    @discardableResult
+    public func connect() async throws -> Pop3Response? {
+        let greeting = try await withSessionTimeout {
+            try await self.client.start()
+            return await self.client.waitForResponse()
+        }
+        if let greeting, greeting.isSuccess {
+            lastGreeting = greeting
+        }
+        return greeting
+    }
+
+    public func disconnect() async {
+        _ = try? await withSessionTimeout {
+            _ = try await self.client.send(.quit)
+        }
+        await client.stop()
+        lastGreeting = nil
+    }
+
+    public func capability() async throws -> Pop3Capabilities? {
+        try await withSessionTimeout {
+            try await self.client.capa()
+        }
+    }
+
+    public func authenticate(user: String, password: String) async throws -> (user: Pop3Response?, pass: Pop3Response?) {
+        try await withSessionTimeout {
+            try await self.client.authenticate(user: user, password: password)
+        }
+    }
+
+    public func apop(user: String, digest: String) async throws -> Pop3Response? {
+        try await withSessionTimeout {
+            _ = try await self.client.send(.apop(user, digest))
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess else {
+                throw self.pop3CommandError(from: response)
+            }
+            return response
+        }
+    }
+
+    public func authenticateApop(
+        user: String,
+        password: String,
+        greeting: Pop3Response? = nil
+    ) async throws -> Pop3Response? {
+        // Only wraps the actual network call (apop) which is already wrapped.
+        // We just perform logic here.
+        let challenge = (greeting ?? lastGreeting)?.apopChallenge
+        guard let challenge else {
+            throw SessionError.pop3Error(message: "APOP challenge is not available.")
+        }
+        guard let digest = Pop3Apop.digest(challenge: challenge, password: password) else {
+            throw SessionError.pop3Error(message: "APOP digest is not available.")
+        }
+        return try await apop(user: user, digest: digest)
+    }
+
+    public func auth(mechanism: String, initialResponse: String? = nil) async throws -> Pop3Response? {
+        try await withSessionTimeout {
+            _ = try await self.client.send(.auth(mechanism, initialResponse: initialResponse))
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess else {
+                throw self.pop3CommandError(from: response)
+            }
+            return response
+        }
+    }
+
+    public func auth(
+        mechanism: String,
+        initialResponse: String? = nil,
+        responder: @Sendable @escaping (String) async throws -> String
+    ) async throws -> Pop3Response? {
+        try await withSessionTimeout {
+            _ = try await self.client.send(.auth(mechanism, initialResponse: initialResponse))
+            guard var response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+
+            while response.isContinuation {
+                try Task.checkCancellation()
+                let reply = try await responder(response.message)
+                _ = try await self.client.sendLine(reply)
+                guard let next = await self.client.waitForResponse() else {
+                    if await self.client.state == .disconnected {
+                        throw SessionError.connectionClosed(message: "Connection closed by server.")
+                    }
+                    throw SessionError.timeout
+                }
+                response = next
+            }
+
+            guard response.isSuccess else {
+                throw self.pop3CommandError(from: response)
+            }
+            return response
+        }
+    }
+
+    // authenticate wrappers call auth/authenticate which are already wrapped.
+
+    public func authenticate(_ authentication: Pop3Authentication) async throws -> Pop3Response? {
+        if let responder = authentication.responder {
+            return try await auth(
+                mechanism: authentication.mechanism,
+                initialResponse: authentication.initialResponse,
+                responder: responder
+            )
+        }
+        return try await auth(
+            mechanism: authentication.mechanism,
+            initialResponse: authentication.initialResponse
+        )
+    }
+
+    // ... authenticateCramMd5, authenticateXoauth2, authenticateSasl wrappers are fine as they call authenticate ...
+
+    public func authenticateCramMd5(user: String, password: String) async throws -> Pop3Response? {
+        guard let authentication = Pop3Sasl.cramMd5(username: user, password: password) else {
+            throw SessionError.pop3Error(message: "CRAM-MD5 is not available.")
+        }
+        return try await authenticate(authentication)
+    }
+
+    public func authenticateXoauth2(user: String, accessToken: String) async throws -> Pop3Response? {
+        let authentication = Pop3Sasl.xoauth2(username: user, accessToken: accessToken)
+        return try await authenticate(authentication)
+    }
+
+    /// Authenticates using SASL with automatic mechanism selection.
+    ///
+    /// - Parameters:
+    ///   - user: The username.
+    ///   - password: The password.
+    ///   - capabilities: Optional server capabilities. If nil, capabilities will be queried.
+    ///   - mechanisms: Optional list of allowed mechanisms.
+    ///   - channelBinding: Optional SCRAM channel binding data. If `nil`, the session uses
+    ///     the transport's TLS channel binding when available.
+    /// - Returns: The server's response.
+    public func authenticateSasl(
+        user: String,
+        password: String,
+        capabilities: Pop3Capabilities? = nil,
+        mechanisms: [String]? = nil,
+        channelBinding: ScramChannelBinding? = nil
+    ) async throws -> Pop3Response? {
+        let availableMechanisms: [String]
+        if let mechanisms {
+            availableMechanisms = mechanisms
+        } else if let capabilities {
+            availableMechanisms = capabilities.saslMechanisms()
+        } else if let fetched = try await capability() {
+            availableMechanisms = fetched.saslMechanisms()
+        } else {
+            availableMechanisms = []
+        }
+
+        let resolvedChannelBinding: ScramChannelBinding?
+        if let channelBinding {
+            resolvedChannelBinding = channelBinding
+        } else if let tlsTransport = transport as? AsyncStartTlsTransport {
+            resolvedChannelBinding = await tlsTransport.scramChannelBinding
+        } else {
+            resolvedChannelBinding = nil
+        }
+
+        guard let authentication = Pop3Sasl.chooseAuthentication(
+            username: user,
+            password: password,
+            mechanisms: availableMechanisms,
+            channelBinding: resolvedChannelBinding
+        ) else {
+            throw SessionError.pop3Error(message: "No supported SASL mechanisms.")
+        }
+        return try await authenticate(authentication)
+    }
+
+    public func authenticateSasl(
+        user: String,
+        accessToken: String,
+        capabilities: Pop3Capabilities? = nil,
+        mechanisms: [String]? = nil
+    ) async throws -> Pop3Response? {
+        let availableMechanisms: [String]
+        if let mechanisms {
+            availableMechanisms = mechanisms
+        } else if let capabilities {
+            availableMechanisms = capabilities.saslMechanisms()
+        } else if let fetched = try await capability() {
+            availableMechanisms = fetched.saslMechanisms()
+        } else {
+            availableMechanisms = []
+        }
+
+        guard availableMechanisms.contains(where: { $0.caseInsensitiveCompare("XOAUTH2") == .orderedSame }) else {
+            throw SessionError.pop3Error(message: "XOAUTH2 is not supported.")
+        }
+        return try await authenticateXoauth2(user: user, accessToken: accessToken)
+    }
+
+    public func noop() async throws -> Pop3Response? {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.noop)
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess else {
+                throw self.pop3CommandError(from: response)
+            }
+            return response
+        }
+    }
+
+    public func rset() async throws -> Pop3Response? {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.rset)
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess else {
+                throw self.pop3CommandError(from: response)
+            }
+            return response
+        }
+    }
+
+    public func dele(_ index: Int) async throws -> Pop3Response? {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.dele(index))
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess else {
+                throw self.pop3CommandError(from: response)
+            }
+            return response
+        }
+    }
+
+    public func list(_ index: Int) async throws -> Pop3ListItem {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.list(index))
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess, let item = Pop3ListItem.parseLine(response.message) else {
+                throw self.pop3CommandError(from: response)
+            }
+            return item
+        }
+    }
+
+    public func uidl(_ index: Int) async throws -> Pop3UidlItem {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.uidl(index))
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess, let item = Pop3UidlItem.parseLine(response.message) else {
+                throw self.pop3CommandError(from: response)
+            }
+            return item
+        }
+    }
+
+    public func retr(_ index: Int) async throws -> [String] {
+        try await ensureAuthenticated()
+        await client.expectMultilineResponse()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.retr(index))
+            let event = try await self.waitForMultilineEvent()
+            if case let .multiline(response, lines) = event {
+                guard response.isSuccess else {
+                    throw self.pop3CommandError(from: response)
+                }
+                return lines
+            }
+            if case let .single(response) = event {
+                throw self.pop3CommandError(from: response)
+            }
+            throw SessionError.timeout
+        }
+    }
+
+    public func retrData(_ index: Int) async throws -> Pop3MessageData {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.retr(index))
+            let (response, data) = try await self.waitForMultilineDataResponse()
+            return Pop3MessageData(response: response, data: data)
+        }
+    }
+
+    public func retrRaw(_ index: Int) async throws -> [UInt8] {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.retr(index))
+            return try await self.waitForMultilineData()
+        }
+    }
+
+    public func retrStream(
+        _ index: Int,
+        sink: @Sendable @escaping ([UInt8]) async throws -> Void
+    ) async throws {
+        try await ensureAuthenticated()
+        try await withSessionTimeout {
+            _ = try await self.client.send(.retr(index))
+            try await self.streamMultilineData(into: sink)
+        }
+    }
+
+    public func top(_ index: Int, lines: Int) async throws -> [String] {
+        try await ensureAuthenticated()
+        await client.expectMultilineResponse()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.top(index, lines: lines))
+            let event = try await self.waitForMultilineEvent()
+            if case let .multiline(response, lines) = event {
+                guard response.isSuccess else {
+                    throw self.pop3CommandError(from: response)
+                }
+                return lines
+            }
+            if case let .single(response) = event {
+                throw self.pop3CommandError(from: response)
+            }
+            throw SessionError.timeout
+        }
+    }
+
+    public func topData(_ index: Int, lines: Int) async throws -> Pop3MessageData {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.top(index, lines: lines))
+            let (response, data) = try await self.waitForMultilineDataResponse()
+            return Pop3MessageData(response: response, data: data)
+        }
+    }
+
+    public func topRaw(_ index: Int, lines: Int) async throws -> [UInt8] {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.top(index, lines: lines))
+            return try await self.waitForMultilineData()
+        }
+    }
+
+    public func topStream(
+        _ index: Int,
+        lines: Int,
+        sink: @Sendable @escaping ([UInt8]) async throws -> Void
+    ) async throws {
+        try await ensureAuthenticated()
+        try await withSessionTimeout {
+            _ = try await self.client.send(.top(index, lines: lines))
+            try await self.streamMultilineData(into: sink)
+        }
+    }
+
+    public func stat() async throws -> Pop3StatResponse {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.stat)
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            if let stat = Pop3StatResponse.parse(response) {
+                return stat
+            }
+            throw self.pop3CommandError(from: response)
+        }
+    }
+
+    public func last() async throws -> Int {
+        try await ensureAuthenticated()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.last)
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess, let value = Int(response.message) else {
+                throw self.pop3CommandError(from: response)
+            }
+            return value
+        }
+    }
+
+    public func retrBytes(_ index: Int) async throws -> [UInt8] {
+        let lines = try await retr(index)
+        return assembleBytes(from: lines)
+    }
+
+    public func topBytes(_ index: Int, lines: Int) async throws -> [UInt8] {
+        let result = try await top(index, lines: lines)
+        return assembleBytes(from: result)
+    }
+
+    public func list() async throws -> [Pop3ListItem] {
+        try await ensureAuthenticated()
+        await client.expectMultilineResponse()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.list(nil))
+            let event = try await self.waitForMultilineEvent()
+            if case let .multiline(response, lines) = event {
+                guard response.isSuccess else {
+                    throw self.pop3CommandError(from: response)
+                }
+                return Pop3ListParser.parse(lines)
+            }
+            if case let .single(response) = event {
+                throw self.pop3CommandError(from: response)
+            }
+            throw SessionError.timeout
+        }
+    }
+
+    public func uidl() async throws -> [Pop3UidlItem] {
+        try await ensureAuthenticated()
+        await client.expectMultilineResponse()
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.uidl(nil))
+            let event = try await self.waitForMultilineEvent()
+            if case let .multiline(response, lines) = event {
+                guard response.isSuccess else {
+                    throw self.pop3CommandError(from: response)
+                }
+                return Pop3UidlParser.parse(lines)
+            }
+            if case let .single(response) = event {
+                throw self.pop3CommandError(from: response)
+            }
+            throw SessionError.timeout
+        }
+    }
+
+    public func startTls(validateCertificate: Bool = true) async throws -> Pop3Response {
+        guard let tlsTransport = transport as? AsyncStartTlsTransport else {
+            throw SessionError.startTlsNotSupported
+        }
+        return try await withSessionTimeout {
+            _ = try await self.client.send(.stls)
+            guard let response = await self.client.waitForResponse() else {
+                if await self.client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                throw SessionError.timeout
+            }
+            guard response.isSuccess else {
+                throw self.pop3CommandError(from: response)
+            }
+            try await tlsTransport.startTLS(validateCertificate: validateCertificate)
+            return response
+        }
+    }
+
+    public func capabilities() async -> Pop3Capabilities? {
+        await client.capabilities
+    }
+
+    private func waitForMultilineEvent(maxEmptyReads: Int = 10) async throws -> Pop3ResponseEvent {
+        var emptyReads = 0
+        while emptyReads < maxEmptyReads {
+            try Task.checkCancellation()
+            let events = await client.nextEvents()
+            if let event = events.first {
+                return event
+            }
+            if await client.state == .disconnected {
+                throw SessionError.connectionClosed(message: "Connection closed by server.")
+            }
+            emptyReads += 1
+        }
+        throw SessionError.timeout
+    }
+
+    private func waitForMultilineDataResponse(maxEmptyReads: Int = 10) async throws -> (Pop3Response, [UInt8]) {
+        var decoder = Pop3MultilineByteDecoder()
+        decoder.expectMultiline()
+        var emptyReads = 0
+        while emptyReads < maxEmptyReads {
+            try Task.checkCancellation()
+            let chunk = await client.nextChunk()
+            if chunk.isEmpty {
+                if await client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                emptyReads += 1
+                continue
+            }
+            let events = decoder.append(chunk)
+            for event in events {
+                switch event {
+                case let .single(response):
+                    throw pop3CommandError(from: response)
+                case let .multiline(response, data):
+                    guard response.isSuccess else {
+                        throw pop3CommandError(from: response)
+                    }
+                    return (response, data)
+                }
+            }
+        }
+        throw SessionError.timeout
+    }
+
+    private func waitForMultilineData(maxEmptyReads: Int = 10) async throws -> [UInt8] {
+        let (_, data) = try await waitForMultilineDataResponse(maxEmptyReads: maxEmptyReads)
+        return data
+    }
+
+    private func streamMultilineData(
+        into sink: @Sendable ([UInt8]) async throws -> Void,
+        maxEmptyReads: Int = 10
+    ) async throws {
+        var lineBuffer = ByteLineBuffer()
+        var emptyReads = 0
+        var awaitingStatus = true
+        var isFirstLine = true
+
+        while emptyReads < maxEmptyReads {
+            try Task.checkCancellation()
+            let chunk = await client.nextChunk()
+            if chunk.isEmpty {
+                if await client.state == .disconnected {
+                    throw SessionError.connectionClosed(message: "Connection closed by server.")
+                }
+                emptyReads += 1
+                continue
+            }
+
+            let lines = lineBuffer.append(chunk)
+            for line in lines {
+                if awaitingStatus {
+                    let text = String(decoding: line, as: UTF8.self)
+                    if let response = Pop3Response.parse(text) {
+                        if response.isSuccess {
+                            awaitingStatus = false
+                            continue
+                        }
+                        throw pop3CommandError(from: response)
+                    }
+                    continue
+                }
+
+                if line == [0x2e] {
+                    return
+                }
+
+                let dataLine: [UInt8]
+                if line.count >= 2, line[0] == 0x2e, line[1] == 0x2e {
+                    dataLine = Array(line.dropFirst())
+                } else {
+                    dataLine = line
+                }
+
+                if isFirstLine {
+                    try await sink(dataLine)
+                    isFirstLine = false
+                } else {
+                    var chunk: [UInt8] = [0x0D, 0x0A]
+                    chunk.append(contentsOf: dataLine)
+                    try await sink(chunk)
+                }
+            }
+        }
+
+        throw SessionError.timeout
+    }
+
+    private func withSessionTimeout<T: Sendable>(_ operation: @Sendable @escaping () async throws -> T) async throws -> T {
+        try await withTimeout(milliseconds: timeoutMilliseconds, operation: operation)
+    }
+
+    private nonisolated func pop3CommandError(from response: Pop3Response) -> Pop3CommandError {
+        Pop3CommandError(statusText: response.message)
+    }
+
+    private func ensureAuthenticated() async throws {
+        let clientState = await client.state
+        guard clientState == .authenticated else {
+            let mailState: MailServiceState = clientState == .disconnected ? .disconnected : .connected
+            throw SessionError.invalidState(expected: .authenticated, actual: mailState)
+        }
+    }
+
+    private func assembleBytes(from lines: [String]) -> [UInt8] {
+        guard !lines.isEmpty else { return [] }
+        let joined = lines.joined(separator: "\r\n")
+        return Array(joined.utf8)
+    }
+}
+
+@available(macOS 10.15, iOS 13.0, *)
+extension AsyncPop3Session: AsyncMailService {
+    public typealias ConnectResponse = Pop3Response?
+
+    public var state: MailServiceState {
+        get async {
+            let clientState = await client.state
+            switch clientState {
+            case .disconnected:
+                return .disconnected
+            case .connected, .authenticating:
+                return .connected
+            case .authenticated:
+                return .authenticated
+            }
+        }
+    }
+
+    public var isConnected: Bool {
+        get async {
+            let clientState = await client.state
+            return clientState != .disconnected
+        }
+    }
+
+    public var isAuthenticated: Bool {
+        get async { await client.state == .authenticated }
+    }
+}

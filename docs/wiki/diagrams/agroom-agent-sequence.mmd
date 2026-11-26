@@ -1,0 +1,57 @@
+%% 一次普通智体委派的时序；脚本确认是条件分支，不代表每次都会弹确认。
+sequenceDiagram
+    actor U as 用户
+    participant V as ChatView
+    participant P as 主 DispatcherEngine
+    participant M as 主 CloudProvider / LLM
+    participant A as AgentTool
+    participant C as 子 DispatcherEngine
+    participant S as 子 CloudProvider / LLM
+    participant T as 子工具 / 技能脚本
+
+    U->>V: 发送请求
+    V->>P: 运行主任务（历史、空间、权限、预算）
+    P->>M: 用户请求 + 历史 + 工具定义
+    M-->>P: agent_*(message, context)
+    P->>P: 校验调用、权限、范围与预算
+    P->>A: execute(argumentsJSON)
+    A->>A: 解析 Provider / 模型；组装人设、范围与相关知识
+    A->>C: 新建引擎；新 runID，关联 parentRunID
+    Note over A,C: 独立 history: []；共享父 Token / 工具账本与本轮授权，继承任务范围和 deadline
+    A->>C: run(userMessage, history: [])
+    loop 直到 finished / 失败 / 取消 / 预算耗尽
+        C->>C: 请求前预留预算
+        C->>S: 子提示 + 委派输入 + 当前子历史 + 受限工具定义
+        S-->>C: 正文 / 工具调用 / usage
+        C->>C: 结算 usage；检查工具调用
+        opt 需要执行工具
+            C->>C: 参数、权限、技能范围与执行授权检查
+            opt 需要内层确认且未获规则或审核放行
+                C-->>A: needsConfirmation（原工具、参数、approvalID）
+                A-->>P: ToolSuspensionError / chainSuspension
+                P-->>V: 挂起宿主调用，显示真实内层请求
+                V-->>U: 请求决定
+                U->>V: 批准 / 拒绝
+                V->>P: resume 原挂起项
+                P->>A: 恢复挂起句柄
+                A->>C: resume 同一个子引擎与内层 approvalID
+                Note over P,C: 拒绝生成对应工具结果；再次挂起则重复此链，不批准整条子流程
+            end
+            alt 调用获准且执行前核验通过
+                C->>T: 执行受限工具
+                T-->>C: 工具结果 / 真实产物回执
+            else 用户拒绝 / 规则拒绝 / 越权
+                C->>C: 不执行；生成对应失败 toolResult
+            end
+            C-->>P: progress relay：agent_* > tool 轨迹
+            C->>C: toolResult 回填子历史
+        end
+    end
+    C-->>A: finished（正文、轨迹）
+    A-->>P: 子正文 + 工具步骤摘要
+    P->>P: 按原 toolCallId 回填父 toolResult
+    P->>M: 继续主模型回合
+    M-->>P: 综合答复或后续工具调用
+    P-->>V: 主任务结果与轨迹
+    V->>V: SessionService 保存发起空间的消息 / 运行记录
+    V-->>U: 展示答复与成果
