@@ -227,11 +227,15 @@ public struct ProductTaskCenterStore: Sendable {
             let clearedJobs = try Self.clearedHistoryIDs(liveJobIDs.map { "job:" + $0 }, in: db)
             return (items, clearedJobs, overlaidJobs)
         }
-        let jobItems = overlaidJobs.map(ProductTaskCenterItem.job).filter { item in
-            (group == nil || item.status.taskGroup == group) && (source == nil || source == .job)
-                && (!item.canClearHistory || !clearedJobs.contains(item.id))
-                && (search.isEmpty || item.title.localizedCaseInsensitiveContains(search) || item.preview.localizedCaseInsensitiveContains(search))
-                && (before == nil || item.startedAt < before!.startedAt || (item.startedAt == before!.startedAt && item.id < before!.id))
+        let liveItems = overlaidJobs.map(ProductTaskCenterItem.job)
+        let jobItems = liveItems.filter { item in
+            if let group, item.status.taskGroup != group { return false }
+            if let source, source != .job { return false }
+            if item.canClearHistory && clearedJobs.contains(item.id) { return false }
+            guard search.isEmpty || item.title.localizedCaseInsensitiveContains(search)
+                    || item.preview.localizedCaseInsensitiveContains(search) else { return false }
+            guard let before else { return true }
+            return item.startedAt < before.startedAt || (item.startedAt == before.startedAt && item.id < before.id)
         }
         let combined = (databaseItems + jobItems).sorted { $0.startedAt == $1.startedAt ? $0.id > $1.id : $0.startedAt > $1.startedAt }
         return .init(items: Array(combined.prefix(count)), hasMore: combined.count > count)

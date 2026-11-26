@@ -121,6 +121,10 @@ internal struct MCPEventParser {
     private var afterCR = false
     private var firstLine = true
 
+    init(responseID: String?) {
+        self.responseID = responseID
+    }
+
     mutating func append(_ byte: UInt8) throws -> Data? {
         if afterCR {
             afterCR = false

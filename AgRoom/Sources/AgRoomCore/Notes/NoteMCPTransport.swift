@@ -76,18 +76,19 @@ private final class NoteMCPHTTPHandler: ChannelInboundHandler {
             }
             let request = NoteMCPHTTPRequest(method: head.method.rawValue, headers: headers, body: body, path: head.uri)
             let channel = context.channel
-            let handler = handler
             dispatched = true
-            task = Task {
+            task = Task { @Sendable [handler, request, channel] in
                 let reply = await handler(request)
-                await Self.write(reply, channel: channel)
+                await NoteMCPHTTPHandler.write(reply, channel: channel)
             }
         }
     }
 
     private func dispatch(_ reply: NoteMCPHTTPReply, channel: any Channel) {
         dispatched = true
-        task = Task { await Self.write(reply, channel: channel) }
+        task = Task { @Sendable [reply, channel] in
+            await NoteMCPHTTPHandler.write(reply, channel: channel)
+        }
     }
 
     private static func write(_ reply: NoteMCPHTTPReply, channel: any Channel) async {

@@ -153,12 +153,16 @@ public final class UsageService: Sendable {
                 // Auxiliary requests without a chat remain visible in the same-space totals.
                 let sessionID: String? = row["sessionId"]
                 let id = sessionID ?? "auxiliary"
-                let title: String = row["sessionTitle"] ?? ""
+                let title: String? = row["sessionTitle"]
                 let previous = sessions[id]
-                sessions[id] = .init(id: id, title: title,
-                    inputTokens: (previous?.inputTokens ?? 0) + i, outputTokens: (previous?.outputTokens ?? 0) + o,
-                    turns: (previous?.turns ?? 0) + 1, updatedAt: max(previous?.updatedAt ?? date, date),
-                    isDeleted: sessionID != nil && row["sessionTitle"] as String? == nil)
+                let inputTokens = (previous?.inputTokens ?? 0) + i
+                let outputTokens = (previous?.outputTokens ?? 0) + o
+                let turns = (previous?.turns ?? 0) + 1
+                let updatedAt = max(previous?.updatedAt ?? date, date)
+                sessions[id] = UsageStats.SessionUsage(
+                    id: id, title: title ?? "", inputTokens: inputTokens, outputTokens: outputTokens,
+                    turns: turns, updatedAt: updatedAt, isDeleted: sessionID != nil && title == nil
+                )
             }
             stats.byModel = models.values.sorted { $0.input + $0.output > $1.input + $1.output }
             stats.bySession = sessions.values.sorted { $0.updatedAt > $1.updatedAt }
