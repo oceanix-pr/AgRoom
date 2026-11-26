@@ -22,9 +22,10 @@ struct MailSignatureImportView: View {
             Text(L.string("mail.signature.import")).font(.headline)
             Text(account.emailAddress).foregroundStyle(.secondary)
             Text(L.string("mail.signature.webmailHint")).font(.callout)
-            Picker(L.string("mail.signature.folder"), selection: Binding(get: { folderPath }, set: selectFolder)) {
+            Picker(L.string("mail.signature.folder"), selection: $folderPath) {
                 ForEach(folders, id: \.path) { folder in Text(folder.name).tag(folder.path) }
             }.disabled(folders.isEmpty)
+            .onChange(of: folderPath) { selectFolder(folderPath) }
             Picker(L.string("mail.signature.message"), selection: $sourceID) {
                 Text(L.string("mail.signature.chooseMessage")).tag(nil as UInt32?)
                 ForEach(sources) { source in
@@ -63,7 +64,7 @@ struct MailSignatureImportView: View {
     }
 
     private func loadFolders() {
-        folders = []; folderPath = ""; sources = []; sourceID = nil
+        folders = []; sources = []; sourceID = nil
         read { service in
             let values = try await service.signatureFolders(account: account).sorted {
                 if $0.role != $1.role { return $0.role == .sent }
@@ -71,13 +72,18 @@ struct MailSignatureImportView: View {
             }
             try Task.checkCancellation()
             folders = values
-            if let first = values.first { folderPath = first.path; try await loadSources(first, service: service) }
+            guard let first = values.first else { folderPath = ""; return }
+            if folderPath == first.path {
+                try await loadSources(first, service: service)
+            } else {
+                folderPath = first.path
+            }
         }
     }
 
     private func selectFolder(_ path: String) {
         guard let folder = folders.first(where: { $0.path == path }) else { return }
-        folderPath = path; sources = []; sourceID = nil
+        sources = []; sourceID = nil
         read { service in try await loadSources(folder, service: service) }
     }
 

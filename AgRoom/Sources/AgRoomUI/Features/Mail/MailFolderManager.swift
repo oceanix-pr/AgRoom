@@ -363,7 +363,11 @@ struct MailFolderManagerView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(model.history) { record in
-                                Text(L.string("mail.folder.edit.kind." + record.mutation.kind.rawValue) + " · " + L.string("mail.folder.edit.state." + record.state.rawValue) + " · " + (record.mutation.before.last.map(model.path) ?? record.mutation.after.first.map(model.path) ?? ""))
+                                let kind = L.string("mail.folder.edit.kind." + record.mutation.kind.rawValue)
+                                let state = L.string("mail.folder.edit.state." + record.state.rawValue)
+                                let folder = record.mutation.before.last ?? record.mutation.after.first
+                                let path = folder.map { model.path($0) } ?? ""
+                                Text([kind, state, path].joined(separator: " · "))
                                     .font(.caption).lineLimit(2)
                             }
                         }.frame(maxWidth: .infinity, alignment: .leading)
