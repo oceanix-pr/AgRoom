@@ -11,6 +11,10 @@ BoringSSL provenance and licenses are recorded by upstream in Sources/CNIOBoring
 
 Local manifest adjustments: NIOSSL enables the compiler's `CheckImplementationOnly`
 feature so implementation-only C imports are checked without library evolution.
+Swift 6.3 checks the stored layout of `ByteBufferBIO` when this feature is enabled.
+The class stores its owned BIO as an `OpaquePointer` and converts it to the original
+typed pointer at the C call sites. The same allocation, retain and release calls
+manage its lifetime. The source change is included in `AGROOM-ANALYZER.patch`.
 The vendored CNIOBoringSSL C/C++ target alone opts out of Xcode's macOS
 `-Wshorten-64-to-32` advisory for upstream's legacy integer API bridges. This is a
 target-scoped warning policy, not a fix or suppression in application code; it

@@ -204,7 +204,11 @@ final class ByteBufferBIO {
     ///
     /// Because of this split initialization dance, we elect to initialize this data structure,
     /// and have it own building an BoringSSL `BIO` structure.
-    private let bioPtr: UnsafeMutablePointer<BIO>
+    private let bioHandle: OpaquePointer
+
+    private var bioPtr: UnsafeMutablePointer<BIO> {
+        UnsafeMutablePointer(self.bioHandle)
+    }
 
     /// The buffer of bytes received from the network.
     ///
@@ -262,7 +266,7 @@ final class ByteBufferBIO {
 
         // We now need to complete the BIO initialization. The BIO takes an owned reference to self here,
         // which is broken on close().
-        self.bioPtr = bio
+        self.bioHandle = OpaquePointer(bio)
         self.maximumPreservedOutboundBufferCapacity = maximumPreservedOutboundBufferCapacity
         self.allocator = allocator
         CNIOBoringSSL_BIO_set_data(self.bioPtr, Unmanaged.passRetained(self).toOpaque())
