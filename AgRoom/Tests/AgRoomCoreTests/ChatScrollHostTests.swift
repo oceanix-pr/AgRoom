@@ -69,6 +69,9 @@ struct ChatScrollHostTests {
     func readingEarlierMessageDuringStream() async throws {
         let model = ChatScrollProbeModel()
         model.items = Array(1...18)
+        // A trailing result card keeps the reader outside the follow threshold
+        // even while the final Markdown view replaces its streaming placeholder.
+        model.detailHeight = 600
         model.markdown = "[reference][late]\n\n```swift\n" + (1...48).map { "let value\($0) = \($0)" }.joined(separator: "\n")
         let hosting = NSHostingView(rootView: ChatScrollProbeView(model: model))
         let window = makeWindow(hosting: hosting)
@@ -97,9 +100,11 @@ struct ChatScrollHostTests {
                 return false
             }
         }
-        let finalPosition = try #require(model.snapshot.readerFrame?.minY)
-        #expect(abs(finalPosition - position) <= 2)
-        #expect(model.snapshot.paused && (model.distanceFromBottom ?? 0) > ChatScrollState.pauseDistance)
+        try await waitUntil(host: hosting, window: window, timeout: 5) {
+            guard let reader = model.snapshot.readerFrame else { return false }
+            return abs(reader.minY - position) <= 2 && model.snapshot.paused
+                && (model.distanceFromBottom ?? 0) > ChatScrollState.pauseDistance
+        }
     }
 
     private func makeWindow(hosting: NSHostingView<ChatScrollProbeView>) -> NSWindow {
@@ -199,13 +204,13 @@ private struct ChatScrollProbeView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Message \(item) " + String(repeating: "content ", count: (item % 7) * 4 + 4))
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                            if item == model.items.last, !model.markdown.isEmpty {
+                                MarkdownView(text: model.markdown, streaming: model.streaming, documentID: "reply", model: model.renderer)
+                            }
                             if item == model.items.last, model.detailHeight > 0 {
                                 Text("Late markdown body")
                                     .frame(maxWidth: .infinity, minHeight: model.detailHeight, alignment: .topLeading)
                                     .background(Color.gray.opacity(0.08))
-                            }
-                            if item == model.items.last, !model.markdown.isEmpty {
-                                MarkdownView(text: model.markdown, streaming: model.streaming, documentID: "reply", model: model.renderer)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)

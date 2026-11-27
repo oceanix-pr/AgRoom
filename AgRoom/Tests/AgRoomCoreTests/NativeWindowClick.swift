@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import Testing
 
 extension NSWindow {
@@ -45,11 +46,26 @@ extension NSWindow {
             }
             hit = view.superview
         }
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            let event = try #require(NSEvent.mouseEvent(with: type, location: point, modifierFlags: [],
+        func mouseEvent(_ type: NSEvent.EventType) throws -> NSEvent {
+            try #require(NSEvent.mouseEvent(with: type, location: point, modifierFlags: [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: windowNumber, context: nil,
                 eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0), sourceLocation: sourceLocation)
-            sendEvent(event)
+        }
+        let down = try mouseEvent(.leftMouseDown)
+        let up = try mouseEvent(.leftMouseUp)
+        // A hosting view can forward mouseDown into a native tracking loop. Put its
+        // matching release in this process's queue before dispatching the press.
+        // NSApp.postEvent would also stop SwiftPM's main run loop.
+        try withExtendedLifetime(up) {
+            let queue = GetMainEventQueue()
+            let reference = OpaquePointer(try #require(up.eventRef, sourceLocation: sourceLocation))
+            try #require(PostEventToQueue(queue, reference, EventPriority(kEventPriorityHigh)) == noErr,
+                         sourceLocation: sourceLocation)
+            sendEvent(down)
+            if IsEventInQueue(queue, reference) {
+                try #require(RemoveEventFromQueue(queue, reference) == noErr, sourceLocation: sourceLocation)
+                sendEvent(up)
+            }
         }
     }
 }
@@ -61,11 +77,20 @@ struct NativeWindowClickTests {
         var received: [NSEvent.EventType] = []
         var selections: [Int] = []
         var checked: [NSControl.StateValue] = []
+        var forwardedButton: NSButton?
+        var exports = 0
+        override func hitTest(_ point: NSPoint) -> NSView? {
+            forwardedButton == nil ? super.hitTest(point) : self
+        }
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-        override func mouseDown(with event: NSEvent) { received.append(event.type) }
+        override func mouseDown(with event: NSEvent) {
+            received.append(event.type)
+            forwardedButton?.mouseDown(with: event)
+        }
         override func mouseUp(with event: NSEvent) { received.append(event.type) }
         @objc func selected(_ control: NSSegmentedControl) { selections.append(control.selectedSegment) }
         @objc func toggle(_ control: NSButton) { checked.append(control.state) }
+        @objc func export(_ control: NSButton) { exports += 1 }
     }
 
     @Test("Native controls activate once and a custom view receives its mouse release")
@@ -91,5 +116,11 @@ struct NativeWindowClickTests {
         #expect(probe.received == [.leftMouseDown, .leftMouseUp])
         try window.sendTestClick(at: .init(x: 30, y: 40), matching: "Enable")
         #expect(probe.checked == [.on] && checkbox.state == .on)
+        let export = NSButton(title: "Export", target: probe, action: #selector(Probe.export(_:)))
+        export.frame = .init(x: 10, y: 4, width: 100, height: 24)
+        probe.addSubview(export)
+        probe.forwardedButton = export
+        try window.sendTestClick(at: .init(x: 35, y: 16), matching: "Export")
+        #expect(probe.exports == 1)
     }
 }

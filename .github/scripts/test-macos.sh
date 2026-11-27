@@ -3,6 +3,14 @@ set -eo pipefail
 
 log="$RUNNER_TEMP/package-tests.log"
 touch "$log"
+belongs_to_this_run() {
+    local ancestor=$1
+    while (( ancestor > 1 )); do
+        if (( ancestor == $$ )); then return 0; fi
+        read -r ancestor < <(ps -o ppid= -p "$ancestor") || return 1
+    done
+    return 1
+}
 (
     while sleep 60; do
         if (( $(date +%s) - $(stat -f %m "$log") < 120 )); then
@@ -12,11 +20,16 @@ touch "$log"
         ps -ax -o pid=,comm= |
             awk '$NF ~ /\/(swiftpm-testing-helper|swift-testing-helper|AgRoomPackageTests|xctest)$/ {print $1}' |
         while read -r pid; do
+            belongs_to_this_run "$pid" || continue
             stack="$RUNNER_TEMP/package-tests-$pid.sample"
             /usr/bin/sample "$pid" 2 12 -file "$stack" >/dev/null 2>&1 || continue
             # Show test call sites and their callees without dumping binary paths.
             awk '/Binary Images:/ {exit} /Tests\.swift:[0-9]+/ {context=12}
                  context>0 {print; context--; if (++lines>=140) exit}' "$stack"
+            if grep -Fq 'NSWindow.sendTestClick' "$stack" && grep -Fq 'trackMouse:inRect:ofView:untilMouseUp:' "$stack"; then
+                echo "::error::The synthetic click is blocked waiting for a mouse release."
+                kill -TERM "$pid" || true
+            fi
         done
         break
     done

@@ -330,9 +330,9 @@ struct ProductTaskCenterHostTests {
         // Some SwiftUI controls have no NSButton child. Locate the button text in
         // this test window's own bitmap and deliver events only to that window.
         var recognized: (CGPoint?, String) = (nil, "")
-        for _ in 0..<20 {
+        for attempt in 0..<20 {
             view.layoutSubtreeIfNeeded(); window.displayIfNeeded()
-            let data = try snapshotData(view)
+            let data = try snapshotData(view, nativeScale: !attempt.isMultiple(of: 2))
             let language = LanguageManager.shared.activeLanguageCode
             recognized = try await Task.detached { () throws -> (CGPoint?, String) in
                 let request = VNRecognizeTextRequest(); request.recognitionLevel = .accurate
