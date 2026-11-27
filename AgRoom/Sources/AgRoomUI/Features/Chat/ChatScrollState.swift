@@ -80,9 +80,6 @@ enum ChatScrollRequest: Equatable {
 /// - 几何变化本身永远不暂停跟随：只有「用户交互中且偏移向上」才视为主动上翻；
 ///   内容增高、窗口缩放、输入框收缩都不改变跟随状态。
 final class ChatScrollState {
-    /// 稳定底部锚点：自动跟随与回底按钮统一定位到这里，搜索仍按消息 ID 定位
-    static let bottomAnchorID = "chatScroll.bottom.anchor"
-
     /// 用户离开底部、暂停跟随的距离阈值
     static let pauseDistance: CGFloat = 120
     /// 用户回到附近、恢复跟随的距离阈值（与 `pauseDistance` 形成滞回，避免边界抖动）

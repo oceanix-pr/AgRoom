@@ -198,7 +198,35 @@ struct ProductTaskCenterHostTests {
         }.value
     }
 
-    private func waitRendered(_ window: NSWindow, containing value: String) async throws -> String {
+    private func visibleLabels(in window: NSWindow) -> [String] {
+        guard let root = window.contentView else { return [] }
+        let screenRect = window.convertToScreen(root.convert(root.visibleRect, to: nil))
+        var seen = Set<ObjectIdentifier>()
+        var labels: [String] = []
+        func visit(_ object: AnyObject, depth: Int) {
+            guard depth < 40, seen.insert(ObjectIdentifier(object)).inserted else { return }
+            if let view = object as? NSView, view.isHiddenOrHasHiddenAncestor || view.visibleRect.isEmpty { return }
+            if let text = object as? NSTextView, let layout = text.layoutManager, let container = text.textContainer {
+                let rect = text.visibleRect.offsetBy(dx: -text.textContainerOrigin.x, dy: -text.textContainerOrigin.y)
+                let glyphs = layout.glyphRange(forBoundingRect: rect, in: container)
+                let range = layout.characterRange(forGlyphRange: glyphs, actualGlyphRange: nil)
+                labels.append((text.string as NSString).substring(with: range))
+            }
+            if let node = object as? any NSAccessibilityProtocol {
+                let frame = node.accessibilityFrame()
+                if node.accessibilityRole() == .staticText, !frame.isEmpty, screenRect.contains(frame) {
+                    labels += [node.accessibilityValue() as? String, node.accessibilityLabel()].compactMap { $0 }
+                }
+                for child in node.accessibilityChildren() ?? [] { visit(child as AnyObject, depth: depth + 1) }
+            }
+            if let view = object as? NSView { for child in view.subviews { visit(child, depth: depth + 1) } }
+        }
+        visit(root, depth: 0)
+        return labels
+    }
+
+    private func waitRendered(_ window: NSWindow, containing value: String,
+                              sourceLocation: SourceLocation = #_sourceLocation) async throws -> String {
         func normalized(_ text: String) -> String {
             String(String.UnicodeScalarView(text.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }))
         }
@@ -210,6 +238,10 @@ struct ProductTaskCenterHostTests {
             let text = try await renderedText(window, customWords: [value])
             last = text
             if normalized(text).contains(normalized(value)) { return text }
+            let native = visibleLabels(in: window)
+            if native.contains(where: { normalized($0).contains(normalized(value)) }) {
+                return ([text] + native).joined(separator: "\n")
+            }
             try await Task.sleep(for: .milliseconds(50))
         }
         if let directory = ProcessInfo.processInfo.environment["AGROOM_PRODUCT_SNAPSHOT_DIR"] {
@@ -217,6 +249,7 @@ struct ProductTaskCenterHostTests {
             try snapshot(window, to: root.appendingPathComponent("rendered-text-failure.png"))
             try ("Expected: " + value + "\n" + last).write(to: root.appendingPathComponent("rendered-text-failure.txt"), atomically: true, encoding: .utf8)
         }
+        Issue.record("Expected visible text '\(value)'. Recognized: \(last.prefix(900))", sourceLocation: sourceLocation)
         throw HostFailure.timeout
     }
 
@@ -230,7 +263,8 @@ struct ProductTaskCenterHostTests {
         throw HostFailure.timeout
     }
 
-    private func pressButton(_ title: String, in window: NSWindow) async throws {
+    private func pressButton(_ title: String, in window: NSWindow, identifier: String? = nil,
+                             sourceLocation: SourceLocation = #_sourceLocation) async throws {
         func button(_ view: NSView) -> NSButton? {
             if let button = view as? NSButton, button.title == title { return button }
             return view.subviews.lazy.compactMap { button($0) }.first
@@ -251,6 +285,9 @@ struct ProductTaskCenterHostTests {
                button.accessibilityFrame().width > 0, button.accessibilityFrame().height > 0,
                button.accessibilityPerformPress() { return true }
             if let node = object as? any NSAccessibilityProtocol {
+                if let identifier, node.accessibilityIdentifier() == identifier,
+                   node.isAccessibilityEnabled(), !node.accessibilityFrame().isEmpty,
+                   node.accessibilityPerformPress() { return true }
                 if node.accessibilityRole() == .button, node.isAccessibilityEnabled(),
                    node.accessibilityLabel() == title || node.accessibilityTitle() == title,
                    node.accessibilityFrame().width > 0, node.accessibilityFrame().height > 0,
@@ -359,31 +396,38 @@ struct ProductTaskCenterHostTests {
             try await Task.sleep(for: .milliseconds(50))
         }
         if recognized.0 == nil {
-            // Vision can merge several small SwiftUI toolbar labels into punctuation
-            // when it scans the whole card. Re-read the action strip at its native
-            // resolution before treating an otherwise visible button as missing.
+            // Small labels in a toolbar or composer can merge into a nearby icon.
+            // Scan overlapping tiles at full resolution and map the exact text back to the window.
             let data = try snapshotData(view)
             let language = LanguageManager.shared.activeLanguageCode
             let focused = try await Task.detached { () throws -> (CGPoint?, String) in
                 guard let image = NSBitmapImageRep(data: data)?.cgImage else { return (nil, "") }
-                let crop = CGRect(x: CGFloat(image.width) * 0.68, y: CGFloat(image.height) * 0.16,
-                    width: CGFloat(image.width) * 0.32, height: CGFloat(image.height) * 0.26).integral
-                guard let strip = image.cropping(to: crop) else { return (nil, "") }
-                let request = VNRecognizeTextRequest(); request.recognitionLevel = .accurate
-                request.recognitionLanguages = language == "en" ? ["en-US"] : [language, "en-US"]
-                request.customWords = [title]
-                try VNImageRequestHandler(cgImage: strip).perform([request])
-                for observation in request.results ?? [] {
-                    guard let candidate = observation.topCandidates(10).first(where: { $0.string.range(of: title, options: .caseInsensitive) != nil }),
-                          let range = candidate.string.range(of: title, options: .caseInsensitive),
-                          let bounds = try candidate.boundingBox(for: range)?.boundingBox else { continue }
-                    return (CGPoint(x: (crop.minX + bounds.midX * crop.width) / CGFloat(image.width),
-                        y: 1 - (crop.minY + (1 - bounds.midY) * crop.height) / CGFloat(image.height)), candidate.string)
+                let width = CGFloat(image.width), height = CGFloat(image.height)
+                let size = CGSize(width: ceil(width * 0.6), height: ceil(height * 0.6))
+                var matches: [(CGPoint, String)] = []
+                for y in [0, height - size.height] {
+                    for x in [0, width - size.width] {
+                        let crop = CGRect(origin: CGPoint(x: x, y: y), size: size)
+                        guard let tile = image.cropping(to: crop) else { continue }
+                        let request = VNRecognizeTextRequest()
+                        request.recognitionLevel = .accurate
+                        request.recognitionLanguages = language == "en" ? ["en-US"] : [language, "en-US"]
+                        request.customWords = [title]
+                        try VNImageRequestHandler(cgImage: tile).perform([request])
+                        for observation in request.results ?? [] {
+                            guard let candidate = observation.topCandidates(10).first(where: { $0.string.localizedCaseInsensitiveContains(title) }),
+                                  let range = candidate.string.range(of: title, options: .caseInsensitive),
+                                  let bounds = try candidate.boundingBox(for: range)?.boundingBox else { continue }
+                            let point = CGPoint(x: (crop.minX + bounds.midX * crop.width) / width,
+                                y: 1 - (crop.minY + (1 - bounds.midY) * crop.height) / height)
+                            matches.append((point, candidate.string))
+                        }
+                    }
                 }
-                return (nil, (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n"))
+                guard let best = matches.min(by: { $0.1.count < $1.1.count }) else { return (nil, "") }
+                return (best.0, best.1)
             }.value
             if focused.0 != nil { recognized = focused }
-            else { recognized.1 += "\nFocused: " + focused.1 }
         }
         if recognized.0 == nil, let directory = ProcessInfo.processInfo.environment["AGROOM_PRODUCT_SNAPSHOT_DIR"] {
             let root = URL(fileURLWithPath: directory)
@@ -395,7 +439,7 @@ struct ProductTaskCenterHostTests {
             }
             try describe(view).write(to: root.appendingPathComponent("source-button-hierarchy.txt"), atomically: true, encoding: .utf8)
         }
-        let normalized = try #require(recognized.0)
+        let normalized = try #require(recognized.0, "Could not locate '\(title)' in the test window", sourceLocation: sourceLocation)
         let local = NSPoint(x: normalized.x * view.bounds.width,
             y: (view.isFlipped ? 1 - normalized.y : normalized.y) * view.bounds.height)
         let location = view.convert(local, to: nil)
@@ -1692,7 +1736,13 @@ struct ProductTaskCenterHostTests {
     }
 
     private func snapshotData(_ view: NSView) throws -> Data {
-        let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        let size = view.bounds.size
+        let scale = max(2, view.window?.backingScaleFactor ?? 1)
+        let bitmap = try #require(NSBitmapImageRep(bitmapDataPlanes: nil,
+            pixelsWide: Int(ceil(size.width * scale)), pixelsHigh: Int(ceil(size.height * scale)),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        bitmap.size = size
         view.cacheDisplay(in: view.bounds, to: bitmap)
         let original = try #require(bitmap.cgImage)
         let context = try #require(CGContext(data: nil, width: original.width, height: original.height, bitsPerComponent: 8,
@@ -2412,7 +2462,7 @@ struct ProductTaskCenterHostTests {
         model.inputText = "ORIGINAL UNSENT DRAFT 7412"; model.pendingAttachments = [attachment]
         let window = mount(ChatView(hub: hub, viewModel: model).frame(width: 1360, height: 930), width: 1360, height: 930)
         defer { window.attachedSheet?.close(); window.close() }
-        try await pressButton(L.string("chat.composer.advanced"), in: window)
+        try await pressButton(L.string("chat.composer.advanced"), in: window, identifier: "chat.composer.advanced")
         try await pressButton(L.string("project.memory.exclude"), in: window)
         try await wait(window) { model.excludesMemoryForNextTurn }
         try await pressButton(L.string("project.title"), in: window)

@@ -30,11 +30,6 @@ extension NSWindow {
                 try #require(control.sendAction(action, to: control.target), sourceLocation: sourceLocation)
                 return
             }
-            if let button = view as? NSButton {
-                try #require(button.isEnabled, sourceLocation: sourceLocation)
-                button.performClick(nil)
-                return
-            }
             hit = view.superview
         }
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {

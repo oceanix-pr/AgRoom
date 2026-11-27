@@ -210,6 +210,7 @@ final class ChatScrollProbeSnapshot {
 private struct ChatScrollProbeView: View {
     let model: ChatScrollProbeModel
     @State private var scrollState = ChatScrollState()
+    @State private var scrollPosition = ScrollPosition(idType: Int.self)
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -244,10 +245,10 @@ private struct ChatScrollProbeView: View {
                     Color.clear
                         .frame(height: 1)
                         .padding(.bottom)
-                        .id(ChatScrollState.bottomAnchorID)
                 }
                 .padding([.horizontal, .top])
             }
+            .scrollPosition($scrollPosition)
             .defaultScrollAnchor(.bottom, for: .initialOffset)
             .defaultScrollAnchor(.bottom, for: .alignment)
             .onGeometryChange(for: CGRect.self) { geometry in
@@ -258,7 +259,7 @@ private struct ChatScrollProbeView: View {
             .onAppear {
                 scrollState.bindSession(model.sessionID, reset: true)
                 scrollState.request(.layoutCorrection)
-                scheduleFlush(proxy: proxy)
+                scheduleFlush()
             }
             .onScrollGeometryChange(for: ChatScrollGeometry.self) { geometry in
                 ChatScrollGeometry(
@@ -276,22 +277,36 @@ private struct ChatScrollProbeView: View {
                 model.snapshot.paused = !scrollState.isFollowingBottom
                 if model.snapshot.paused && scrollState.isUserInteracting { scrollState.endUserInteraction() }
                 guard flush else { return }
-                scheduleFlush(proxy: proxy)
+                scheduleFlush()
+            }
+            .onScrollPhaseChange { _, phase in
+                switch phase {
+                case .tracking, .interacting, .decelerating:
+                    scrollState.beginUserInteraction()
+                case .animating:
+                    scrollState.setAnimatingScroll(true)
+                case .idle:
+                    scrollState.endUserInteraction()
+                    scrollState.setAnimatingScroll(false)
+                    scrollState.settle()
+                    scheduleFlush()
+                }
             }
             .onChange(of: model.readerTarget) { _, item in
                 guard let item else { return }
                 scrollState.beginUserInteraction()
+                scrollPosition = ScrollPosition(idType: Int.self)
                 proxy.scrollTo(item, anchor: .top)
             }
             .onChange(of: model.items.count) { _, _ in
                 guard scrollState.isFollowingBottom else { return }
                 scrollState.request(.newMessage)
-                scheduleFlush(proxy: proxy)
+                scheduleFlush()
             }
         }
     }
 
-    private func scheduleFlush(proxy: ScrollViewProxy) {
+    private func scheduleFlush() {
         guard scrollState.beginFlush() else { return }
         let generation = scrollState.generation
         Task { @MainActor in
@@ -301,10 +316,10 @@ private struct ChatScrollProbeView: View {
                   scrollState.canExecute(request) else { return }
             if request.isAnimated {
                 withAnimation(.easeOut(duration: 0.2)) {
-                    proxy.scrollTo(ChatScrollState.bottomAnchorID, anchor: .bottom)
+                    scrollPosition.scrollTo(edge: .bottom)
                 }
             } else {
-                proxy.scrollTo(ChatScrollState.bottomAnchorID, anchor: .bottom)
+                scrollPosition.scrollTo(edge: .bottom)
             }
         }
     }

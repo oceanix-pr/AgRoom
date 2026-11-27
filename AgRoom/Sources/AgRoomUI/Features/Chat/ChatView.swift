@@ -5753,6 +5753,7 @@ public struct ChatView: View {
     /// 滚动跟随状态（非观察态）：跟随意图、按钮可见性、待执行请求与会话世代。
     /// 几何回调只写这里并合并请求，观察态一律延后一拍更新。
     @State private var scrollState = ChatScrollState()
+    @State private var scrollPosition = ScrollPosition(idType: UUID.self)
     /// 三栏显示宽度：构造时快照取初值；拖动期间只改这里（`SplitDivider`），
     /// 拖动结束才写偏好。窗口缩放/切换会话的挤压不写回偏好（见 `SplitColumnWidth`）。
     @State private var sessionColumnWidth: Double
@@ -7386,16 +7387,15 @@ public struct ChatView: View {
                     }
                     .onDisappear { scrollState.forgetMessageFrame(message.id) }
                 }
-                // 稳定底部锚点：位于全部消息与附属内容之后。自动跟随和回底按钮统一指向它，
-                // 避免最后一条消息从空占位变为正文、下方再插入成果卡时定位目标漂移
+                // 为最后一条消息和附属卡片保留底部留白。
                 Color.clear
                     .frame(height: 1)
                     .padding(.bottom)
-                    .id(ChatScrollState.bottomAnchorID)
             }
             .padding([.horizontal, .top])
         }
         .coordinateSpace(name: "chatReadingViewport")
+        .scrollPosition($scrollPosition)
         .onChange(of: readingPointSize) { _, _ in
             scrollState.beginReadingReflow()
             if scrollState.isFollowingBottom { scrollState.request(.layoutCorrection) }
@@ -7422,7 +7422,7 @@ public struct ChatView: View {
             // 离开页面时未执行的滚动任务已按请求世代失效，不能影响重建后的新会话
             scrollState.bindSession(sessionId, reset: true)
             showScrollToBottom = false
-            // 首次布局数据到达前也先请求一次底部锚点；后续几何回调负责补齐校正
+            // 首次布局前先请求回底，后续几何回调在异步内容排版后校正。
             scrollState.request(.layoutCorrection)
             scheduleScrollFlush(proxy: proxy, sessionId: sessionId)
         }
@@ -7452,7 +7452,7 @@ public struct ChatView: View {
         .overlay(alignment: .bottomTrailing) {
             if showScrollToBottom {
                 Button {
-                    // 点击回底：恢复跟随，并统一定位到稳定底部锚点
+                    // 点击回底时恢复跟随，并定位到滚动容器的底边。
                     scrollState.returnToBottom()
                     scheduleScrollFlush(proxy: proxy, sessionId: sessionId)
                 } label: {
@@ -7517,10 +7517,10 @@ public struct ChatView: View {
             }
             if request.isAnimated {
                 withAnimation(.easeOut(duration: 0.2)) {
-                    proxy.scrollTo(ChatScrollState.bottomAnchorID, anchor: .bottom)
+                    scrollPosition.scrollTo(edge: .bottom)
                 }
             } else {
-                proxy.scrollTo(ChatScrollState.bottomAnchorID, anchor: .bottom)
+                scrollPosition.scrollTo(edge: .bottom)
             }
         }
     }
@@ -7554,6 +7554,7 @@ public struct ChatView: View {
     /// 会话内搜索定位：暂停跟随，并作废在途的自动回底，避免下一段流式输出把用户拉走。
     private func jumpToSearchHit(_ messageID: UUID, proxy: ScrollViewProxy) {
         scrollState.beginSearchJump()
+        scrollPosition = ScrollPosition(idType: UUID.self)
         proxy.scrollTo(messageID, anchor: .center)
     }
 
