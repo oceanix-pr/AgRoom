@@ -7,8 +7,17 @@ permissions:
 
 jobs:
   core:
+    name: ${{ matrix.suite }}
     runs-on: macos-26
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: Native task center
+            selection: --filter
+          - suite: Remaining package tests
+            selection: --skip
     defaults:
       run:
         working-directory: AgRoom
@@ -29,15 +38,9 @@ jobs:
           GIT_CONFIG_VALUE_0: none
         run: swift package resolve --force-resolved-versions
       - name: Build application and tests with locked dependencies
-        id: build
         run: swift build --build-tests --build-system native --force-resolved-versions
-      - name: Run native task center tests
-        timeout-minutes: 17
+      - name: Run package tests
         env:
           NSUnbufferedIO: "YES"
-        run: swift test --skip-build --build-system native --force-resolved-versions --no-parallel --filter ProductTaskCenterHostTests
-      - name: Run remaining package tests
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        env:
-          NSUnbufferedIO: "YES"
-        run: swift test --skip-build --build-system native --force-resolved-versions --no-parallel --skip ProductTaskCenterHostTests
+          SELECTION: ${{ matrix.selection }}
+        run: bash ../.github/scripts/test-macos.sh "$SELECTION"

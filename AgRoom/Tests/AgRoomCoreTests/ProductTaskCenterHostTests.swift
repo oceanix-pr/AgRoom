@@ -399,12 +399,7 @@ struct ProductTaskCenterHostTests {
         let local = NSPoint(x: normalized.x * view.bounds.width,
             y: (view.isFlipped ? 1 - normalized.y : normalized.y) * view.bounds.height)
         let location = view.convert(local, to: nil)
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            let event = try #require(NSEvent.mouseEvent(with: type, location: location, modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil,
-                eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0))
-            window.sendEvent(event)
-        }
+        try window.sendTestClick(at: location, matching: title)
     }
 
     /// Operates only the file panel opened by this fixture's named action. The

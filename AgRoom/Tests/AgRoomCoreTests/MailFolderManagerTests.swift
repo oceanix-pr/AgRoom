@@ -281,7 +281,7 @@ struct MailFolderManagerTests {
         if !keyboardDefault, let control = accessibleControl(title, in: view), title != L.string("mail.folder.edit.new") {
             if control.accessibilityRole() == .checkBox, control.accessibilityPerformPress() { return }
             let frame = control.accessibilityFrame()
-            try sendClick(window.convertPoint(fromScreen: NSPoint(x: frame.midX, y: frame.midY)), in: window)
+            try window.sendTestClick(at: window.convertPoint(fromScreen: NSPoint(x: frame.midX, y: frame.midY)), matching: title)
             return
         }
         let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
@@ -311,19 +311,12 @@ struct MailFolderManagerTests {
             try #require(try sendReturn(in: window), "Visible confirmation must respond to its default keyboard action: \(title)")
             return
         }
-        try sendClick(location, in: window)
+        try window.sendTestClick(at: location, matching: title)
     }
     private func sendReturn(in window: NSWindow) throws -> Bool {
         let event = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
             windowNumber: window.windowNumber, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: 36))
         return window.performKeyEquivalent(with: event)
-    }
-    private func sendClick(_ location: NSPoint, in window: NSWindow) throws {
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            let event = try #require(NSEvent.mouseEvent(with: type, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0))
-            window.sendEvent(event)
-        }
     }
     private func accessibleControl(_ title: String, in view: NSView) -> (any NSAccessibilityProtocol)? {
         var visited = Set<ObjectIdentifier>()

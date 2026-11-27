@@ -296,14 +296,14 @@ struct NativeAppBoardTests {
         }
         #expect(model.boardProgress["puzzle"]?.positions["soldier-3"] == .init(x: 1, y: 4))
         #expect(model.boardProgress["puzzle"]?.moves == 1)
-        try click(.init(x: start.x + cell * 3, y: start.y), window: window)
+        try window.sendTestClick(at: .init(x: start.x + cell * 3, y: start.y))
         try await Task.sleep(for: .milliseconds(30))
         let directions = frames.filter { $0.height > 20 && $0.height < cell / 2 }.sorted { $0.minX < $1.minX }
         let left = try #require(directions.first)
-        try click(window.convertPoint(fromScreen: .init(x: left.midX, y: left.midY)), window: window)
+        try window.sendTestClick(at: window.convertPoint(fromScreen: .init(x: left.midX, y: left.midY)))
         try await Task.sleep(for: .milliseconds(30))
         #expect(model.boardProgress["puzzle"]?.positions["soldier-4"] == .init(x: 2, y: 4))
-        try click(.init(x: start.x + cell * 2, y: start.y), window: window)
+        try window.sendTestClick(at: .init(x: start.x + cell * 2, y: start.y))
         try await Task.sleep(for: .milliseconds(30))
         let key = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.function, .numericPad],
             timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil,
@@ -314,13 +314,6 @@ struct NativeAppBoardTests {
         #expect(model.boardProgress["puzzle"]?.moves == 3)
     }
 
-    @MainActor private func click(_ point: NSPoint, window: NSWindow) throws {
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            window.sendEvent(try #require(NSEvent.mouseEvent(with: type, location: point, modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil,
-                eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)))
-        }
-    }
 
     @MainActor private func nativeFrames(in view: NSView) -> [NSRect] {
         var visited = Set<ObjectIdentifier>()

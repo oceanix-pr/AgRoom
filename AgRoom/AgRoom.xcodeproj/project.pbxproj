@@ -357,6 +357,7 @@
 		83EF6F5BAA099EEE330C25D8 /* WebFetchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD95F2F3D6DE69C806FC5E2 /* WebFetchTool.swift */; };
 		84237B85680A686851BB84E4 /* MailImportIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A3C0F3D78B7F82C3B34CDD /* MailImportIndex.swift */; };
 		86C42CE238ABF7CF86203486 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96434A9072B77CB0A7701D47 /* Localization.swift */; };
+		8702A1DEB23789A8B1140A4E /* NativeWindowClick.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B53015B4BE0AF30FED8F9D1 /* NativeWindowClick.swift */; };
 		87787D9F7845430D52C738E7 /* MailOperationUndo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3D015A522ABCA547A55C60 /* MailOperationUndo.swift */; };
 		8811DACE28A2ADF01A192FBD /* SecureFileWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C6A9264A4B0032CA8CEA18B /* SecureFileWriter.swift */; };
 		883F550DB3D5ACD84DFB763E /* ConversationToolScopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9622DC72F7C3AB4FD604D51 /* ConversationToolScopeTests.swift */; };
@@ -1031,6 +1032,7 @@
 		4AC1E23DB353B7CB5FBCE9D6 /* NativeAppScriptService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppScriptService.swift; sourceTree = "<group>"; };
 		4B1766CDD82C2B3E9FFB664B /* MailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailService.swift; sourceTree = "<group>"; };
 		4B206176CA3E8AE3300FB434 /* FilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesView.swift; sourceTree = "<group>"; };
+		4B53015B4BE0AF30FED8F9D1 /* NativeWindowClick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWindowClick.swift; sourceTree = "<group>"; };
 		4BBEBD8816969B8B7F1EA237 /* ProductTaskRun.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductTaskRun.swift; sourceTree = "<group>"; };
 		4C1199E71DADA65D2DBF38DC /* NoteKeyframeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteKeyframeTests.swift; sourceTree = "<group>"; };
 		4C302746BFD8D85709231F40 /* NativeAppBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppBackup.swift; sourceTree = "<group>"; };
@@ -2082,6 +2084,7 @@
 				901D9047B6D71AC9EA331F43 /* NativeAppTests.swift */,
 				F4E511C8E100C6E12096561B /* NativeAppWorkspaceTests.swift */,
 				013109F80A5656FFBDA69886 /* NativeCompactionTests.swift */,
+				4B53015B4BE0AF30FED8F9D1 /* NativeWindowClick.swift */,
 				C757099FCBA1936CA8B60E92 /* NoteCloudSTTTests.swift */,
 				6BBC05E170641341E29E0CD0 /* NoteCompletionTests.swift */,
 				4D338E844F717860598377CE /* NoteEchoCancellerTests.swift */,
@@ -3383,6 +3386,7 @@
 				3A2FA6C20FA8C42AFACDE8A0 /* NativeAppTests.swift in Sources */,
 				8CAFF403FD8BBB0B7053BC80 /* NativeAppWorkspaceTests.swift in Sources */,
 				15751570FB01EA5FF5A9F9D9 /* NativeCompactionTests.swift in Sources */,
+				8702A1DEB23789A8B1140A4E /* NativeWindowClick.swift in Sources */,
 				E643CD0B3BB25C0C3A593397 /* NoteCloudSTTTests.swift in Sources */,
 				A808C9D5DC611E010F6DFFF9 /* NoteCompletionTests.swift in Sources */,
 				73203CD1A1D325D590D070B9 /* NoteEchoCancellerTests.swift in Sources */,

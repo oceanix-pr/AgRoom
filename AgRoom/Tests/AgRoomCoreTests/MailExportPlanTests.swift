@@ -503,16 +503,9 @@ struct MailExportPlanTests {
                 throw NativeControlFailure(title: title, visible: (request.results ?? []).compactMap { $0.topCandidates(1).first?.string })
             }
         }.value
-        try click(view.convert(NSPoint(x: point.x * view.bounds.width, y: (view.isFlipped ? 1 - point.y : point.y) * view.bounds.height), to: nil), in: window)
+        try window.sendTestClick(at: view.convert(NSPoint(x: point.x * view.bounds.width, y: (view.isFlipped ? 1 - point.y : point.y) * view.bounds.height), to: nil), matching: title)
     }
     private struct NativeControlFailure: Error { let title: String; let visible: [String] }
-    @MainActor private func click(_ location: NSPoint, in window: NSWindow) throws {
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            let event = try #require(NSEvent.mouseEvent(with: type, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0))
-            window.sendEvent(event)
-        }
-    }
     @MainActor private func accessibilityNodes(in view: NSView) -> [any NSAccessibilityProtocol] {
         var visited = Set<ObjectIdentifier>()
         func visit(_ object: AnyObject, depth: Int = 0) -> [any NSAccessibilityProtocol] {
@@ -535,7 +528,7 @@ struct MailExportPlanTests {
             $0.accessibilityRole() == .textField && $0.accessibilityValue() as? String == value && $0.accessibilityFrame().width > 0
         }) {
             let frame = field.accessibilityFrame()
-            try click(window.convertPoint(fromScreen: .init(x: frame.midX, y: frame.midY)), in: window)
+            try window.sendTestClick(at: window.convertPoint(fromScreen: .init(x: frame.midX, y: frame.midY)))
         } else { try await pressText(value.isEmpty ? (placeholder ?? "") : value, in: window) }
         let editor = try #require(window.firstResponder as? NSTextView)
         editor.selectAll(nil); editor.insertText(replacement, replacementRange: NSRange(location: NSNotFound, length: 0))

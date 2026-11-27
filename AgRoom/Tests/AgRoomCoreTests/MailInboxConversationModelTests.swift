@@ -419,12 +419,7 @@ struct MailInboxConversationModelTests {
         guard let point, let window = view.window else { return false }
         let location = view.convert(NSPoint(x: point.x * view.bounds.width,
             y: (view.isFlipped ? 1 - point.y : point.y) * view.bounds.height), to: nil)
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            let event = try #require(NSEvent.mouseEvent(with: type, location: location, modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil,
-                eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0))
-            window.sendEvent(event)
-        }
+        try window.sendTestClick(at: location, matching: label)
         return true
     }
 }
