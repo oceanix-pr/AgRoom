@@ -84,12 +84,19 @@ struct ChatScrollHostTests {
         // Keep the previous message and the start of the streaming reply on screen
         // together so the lazy stack is actively rendering the reply during the edit.
         model.readerTarget = try #require(model.items.dropLast().last?.id)
+        var lastPosition: (reader: CGFloat, reply: CGFloat)?
+        var stableSince = ContinuousClock.now
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             guard let reader = model.snapshot.readerFrame, let reply = model.snapshot.lastItemFrame,
                   let viewport = model.snapshot.viewportFrame else { return false }
-            return model.snapshot.paused && reader.intersects(viewport) && reply.intersects(viewport)
-                && abs(reply.minY - reader.maxY - 12) <= 2
+            if lastPosition?.reader != reader.minY || lastPosition?.reply != reply.minY {
+                lastPosition = (reader.minY, reply.minY)
+                stableSince = .now
+            }
+            return model.snapshot.paused && viewport.contains(reader)
+                && reply.minY >= reader.maxY - 2 && reply.minY < viewport.maxY
                 && (model.distanceFromBottom ?? 0) > ChatScrollState.pauseDistance
+                && stableSince.duration(to: .now) >= .milliseconds(80)
         }
         model.scrollState.endUserInteraction()
         let position = try #require(model.snapshot.readerFrame?.minY)
@@ -104,8 +111,11 @@ struct ChatScrollHostTests {
             }
         }
         try await waitUntil(host: hosting, window: window, timeout: 5) {
-            guard let reader = model.snapshot.readerFrame, let reply = model.snapshot.lastItemFrame else { return false }
-            return abs(reader.minY - position) <= 2 && abs(reply.minY - reader.maxY - 12) <= 2 && model.snapshot.paused
+            guard let reader = model.snapshot.readerFrame, let reply = model.snapshot.lastItemFrame,
+                  let viewport = model.snapshot.viewportFrame else { return false }
+            // The reply can reflow when its image resolves. The message being read stays put.
+            return abs(reader.minY - position) <= 2 && viewport.contains(reader)
+                && reply.minY >= reader.maxY - 2 && reply.minY < viewport.maxY && model.snapshot.paused
                 && (model.distanceFromBottom ?? 0) > ChatScrollState.pauseDistance
         }
     }
@@ -323,7 +333,7 @@ private struct ChatScrollProbeView: View {
             .onChange(of: model.readerTarget) { _, item in
                 guard let item else { return }
                 scrollState.beginUserInteraction()
-                scrollPosition.scrollTo(id: item, anchor: .top)
+                scrollPosition.scrollTo(id: item, anchor: .center)
             }
             .onChange(of: model.items.count) { _, _ in
                 guard scrollState.isFollowingBottom else { return }
