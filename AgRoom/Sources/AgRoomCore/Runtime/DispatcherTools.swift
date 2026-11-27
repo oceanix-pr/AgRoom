@@ -44,7 +44,7 @@ struct CurrentTimeTool: DispatcherTool {
 
 // MARK: - Memory Tools
 
-/// 内置工具：检索长期记忆（关键词包含匹配，Top 10；可按类别过滤）
+/// 使用空间内的记忆索引检索相关条目，可按类别筛选。
 struct MemorySearchTool: DispatcherTool {
     let service: MemoryService
 
@@ -75,24 +75,11 @@ struct MemorySearchTool: DispatcherTool {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .lowercased()
         )
-        var memories = try await service.getEnabled()
-        if let category {
-            memories = memories.filter { $0.category == category }
-        }
-        let matched: [MemoryItem]
-        if query.isEmpty {
-            matched = Array(memories.prefix(10))
-        } else {
-            let keywords = query.split(separator: " ").map(String.init)
-            matched = memories.filter { item in
-                let content = item.content.lowercased()
-                return keywords.contains { content.contains($0) }
-            }
-        }
+        let matched = try await service.search(query, category: category)
         guard !matched.isEmpty else {
             return "No matching memories found."
         }
-        return matched.prefix(10).map { "- [\($0.category.rawValue)] \($0.content)" }.joined(separator: "\n")
+        return matched.map { "- [\($0.category.rawValue)] \($0.promptDescription)" }.joined(separator: "\n")
     }
 }
 
@@ -105,7 +92,7 @@ struct MemorySaveTool: DispatcherTool {
             name: "memory_save",
             description: "Save a new long-term memory for the user. Use ONLY when the user explicitly asks to remember something. "
                 + "Pick the category that fits best: \(MemoryCategory.promptTaxonomy).",
-            parametersSchemaJSON: #"{"type":"object","properties":{"content":{"type":"string","description":"The fact or preference to remember, stated declaratively"},"category":{"type":"string","enum":["preference","fact","decision","entity","other"],"description":"Best-fitting category: preference = tastes/styles/habits; fact = objective facts; decision = choices already made; entity = people/projects/systems; other = anything else"}},"required":["content","category"]}"#
+            parametersSchemaJSON: #"{"type":"object","properties":{"content":{"type":"string","description":"The fact or preference to remember, stated declaratively"},"scope":{"type":"string","enum":["space","workspace"],"description":"Use workspace for project-specific instructions; space for general preferences."},"category":{"type":"string","enum":["preference","fact","decision","entity","other"],"description":"Best-fitting category: preference = tastes/styles/habits; fact = objective facts; decision = choices already made; entity = people/projects/systems; other = anything else"}},"required":["content","category"]}"#
         )
     }
     let requiresConfirmation = true
@@ -127,7 +114,12 @@ struct MemorySaveTool: DispatcherTool {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .lowercased()
         ) ?? .other
-        try await service.save(MemoryItem(content: content, category: category))
+        var item = MemoryItem(content: content, category: category)
+        if ToolArguments.string(args, "scope") == "workspace" {
+            guard let id = service.runWorkspaceID else { throw LLMError.configurationError(reason: "No current workspace for this memory") }
+            item.workspaceID = id
+        }
+        try await service.save(item)
         return "Memory saved [\(category.rawValue)]: \(content)"
     }
 }
@@ -1790,7 +1782,7 @@ struct AgentTool: DispatcherTool {
         self.provider = provider
         self.agentProviderResolver = agentProviderResolver
         self.knowledgeService = knowledgeService
-        self.memoryService = resourceContext?.excludesMemory == true ? nil : memoryService
+        self.memoryService = resourceContext?.excludesMemory == true ? nil : memoryService?.forRun(in: resourceContext?.workspaceID)
         self.resourceContext = resourceContext
         self.repository = repository
         self.space = space
@@ -3026,7 +3018,7 @@ public enum DispatcherToolFactory {
         resourceContext: RunResourceContext? = nil
     ) -> [any DispatcherTool] {
         guard resourceContext.map({ $0.isValid && $0.space == space }) ?? true else { return [] }
-        let activeMemory = resourceContext?.excludesMemory == true ? nil : memoryService
+        let activeMemory = resourceContext?.excludesMemory == true ? nil : memoryService?.forRun(in: resourceContext?.workspaceID)
         let enabledSkills = skills.filter(\.isEnabled)
         // shell_run 上下文：默认工作目录=当前会话工作区；环境变量注入工作区/数据库路径
         var shellEnvironment: [String: String] = [:]
@@ -3590,7 +3582,7 @@ public enum DispatcherToolFactory {
         }
         if includeToolGuidance { sections += skillPromptModules(availableToolNames: availableToolNames).map(\.text) }
 
-        // 长期记忆：收敛为摘要（最近 20 条，按类别分组）+ 提示用 memory_search 检索全量，避免常驻膨胀上下文
+        // 按类别展示调用方为本轮选出的记忆，保留候选的相对顺序。
         let enabledMemories = memories.filter(\.isEnabled)
         if !enabledMemories.isEmpty {
             let recent = Array(enabledMemories.prefix(20))
@@ -3605,7 +3597,10 @@ public enum DispatcherToolFactory {
                 let items = recent.filter { $0.category == category }
                 guard !items.isEmpty else { return nil }
                 return Self.memoryCategoryHeading(category) + ":\n"
-                    + items.map { "- \($0.content)" }.joined(separator: "\n")
+                    + items.map { "- " + $0.promptDescription }.joined(separator: "\n")
+            }
+            if recent.contains(where: { $0.workspaceID != nil }) {
+                sections.append("Within this workspace, apply its specific conventions before general preferences on the same subject.")
             }
             sections.append("[Long-term memory context (\(recent.count) selected entries)]\n"
                 + blocks.joined(separator: "\n") + suffix)

@@ -14,6 +14,7 @@ struct CompleteBackupWorkflowTests {
         let skills: SkillStore
         let backup: BackupService
         var sessions: SessionService { .init(databaseQueue: queue) }
+        var memories: MemoryService { .init(databaseQueue: queue) }
         var knowledge: KnowledgeService { .init(databaseQueue: queue) }
         var preferences: ProductPreferencesService { .init(databaseQueue: queue) }
         var apps: NativeAppStore { .init(directoryURL: root.appendingPathComponent("apps"), space: .work) }
@@ -57,6 +58,16 @@ struct CompleteBackupWorkflowTests {
             artifact: TaskArtifact(path: report.path), duration: 0.1, succeeded: true)], runStatus: .succeeded, contextReport: contextReport, taskRun: .init(), memoryExcluded: true)]
         session.messages[0].variations = [AnswerVariation(question: "Retain choices", message: session.messages[0])]
         try await source.sessions.save(session)
+        var memory = MemoryItem(content: "Weekly reports use PDF", category: .preference)
+        memory.workspaceID = workspace.id
+        memory.sourceSessionID = session.id
+        memory.sourceMessageID = session.messages[0].id
+        memory.sourceBasis = .inferred
+        memory.sourceQuote = "Report ready"
+        let checkpoint = MemoryExtractionCheckpoint(sessionID: session.id, after: nil, through: session.messages[0].id)
+        _ = try await source.memories.commitExtraction([memory], checkpoint: checkpoint)
+        memory.alwaysInclude = true
+        try await source.memories.edit(memory)
         let item = KnowledgeItem(title: "Evidence", content: "archived evidence")
         try await source.knowledge.save(item)
         var originalItem = item; originalItem.content = "destination evidence"
@@ -91,6 +102,13 @@ struct CompleteBackupWorkflowTests {
         let restoredSession = try #require(try await target.sessions.fetch(id: session.id))
         let restoredContext = try #require(restoredSession.messages.first?.contextReport?.resourceContext)
         #expect(restoredContext.isValid && restoredContext.excludesMemory && restoredContext.workspaceID.uuidString == restoredSession.workspaceId)
+        let restoredMemory = try #require(try await target.memories.fetch(id: memory.id))
+        #expect(restoredMemory.workspaceID == restoredContext.workspaceID)
+        #expect(restoredMemory.sourceMessageID == memory.sourceMessageID && restoredMemory.sourceQuote == memory.sourceQuote)
+        #expect(restoredMemory.sourceBasis == .inferred && restoredMemory.revision == 1 && restoredMemory.alwaysInclude)
+        #expect(try await target.memories.forRun(in: restoredContext.workspaceID).search("weekly").map(\.id) == [memory.id])
+        #expect(try await target.memories.forRun(in: nil).search("weekly").isEmpty)
+        #expect(try await target.memories.extractionCursor(sessionID: session.id) == checkpoint.through)
         #expect(restoredSession.messages.first?.memoryExcluded == true)
         #expect(restoredSession.messages.first?.variations?.first?.contextReport?.resourceContext == restoredContext)
         #expect(try await WorkspaceProjectStore(databaseQueue: target.queue, space: .work).project(workspaceID: restoredContext.workspaceID)?.configuration == project.configuration)
@@ -111,6 +129,9 @@ struct CompleteBackupWorkflowTests {
         let points = try await target.backup.restorePoints()
         #expect(points.count == 1)
         try await target.backup.undoRestorePoint(id: #require(points.first).id)
+        #expect(try await target.memories.fetch(id: memory.id) == nil)
+        #expect(try await target.memories.search("weekly").isEmpty)
+        #expect(try await target.memories.extractionCursor(sessionID: session.id) == nil)
         #expect(try await target.knowledge.get(id: item.id)?.content == originalItem.content)
         #expect(try await target.sessions.fetch(id: session.id) == nil)
         #expect(try await WorkspaceProjectStore(databaseQueue: target.queue, space: .work).project(workspaceID: restoredContext.workspaceID) == nil)

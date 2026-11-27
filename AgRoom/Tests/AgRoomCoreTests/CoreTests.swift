@@ -6640,6 +6640,30 @@ struct AppManagementToolsTests {
         #expect(!factsOnly.contains("已停用的偏好"))
         let enabledOnly = try await list.execute(argumentsJSON: #"{"include_disabled":false}"#)
         #expect(!enabledOnly.contains("已停用的偏好"))
+        let page = try await list.execute(argumentsJSON: #"{"limit":1}"#)
+        #expect(page.contains("Showing 1 of 2."))
+    }
+
+    @Test("项目记忆的检索、列表、更新和删除均遵守运行的工作区")
+    func workspaceMemoryTools() async throws {
+        let all = MemoryService(databaseQueue: try makeQueue())
+        let project = UUID()
+        let current = all.forRun(in: project), other = all.forRun(in: UUID())
+        let save = MemorySaveTool(service: current)
+        #expect(save.requiresConfirmation)
+        _ = try await save.execute(argumentsJSON: #"{"content":"Weekly reports use PDF","category":"decision","scope":"workspace"}"#)
+        let memory = try #require(try await current.search("weekly").first)
+        #expect(memory.workspaceID == project)
+        let list = try await MemoryListTool(service: other).execute(argumentsJSON: "{}")
+        #expect(!list.contains("Weekly reports"))
+        let id = memory.id.uuidString
+        await #expect(throws: LLMError.self) {
+            try await MemoryUpdateTool(service: other).execute(argumentsJSON: #"{"id":"\#(id)","enabled":false}"#)
+        }
+        await #expect(throws: LLMError.self) {
+            try await MemoryDeleteTool(service: other).execute(argumentsJSON: #"{"id":"\#(id)"}"#)
+        }
+        #expect(try await all.fetch(id: memory.id)?.isEnabled == true)
     }
 
     // MARK: - 智体管理
@@ -9565,9 +9589,13 @@ private final class MemoryExtractionStubProtocol: URLProtocol, @unchecked Sendab
             output = "preference"
         } else {
             switch model {
+            case "sources":
+                output = #"{"memories":[{"content":"项目报告使用英文","category":"decision","source":1,"quote":"本项目改用英文","basis":"stated","scope":"workspace","replaces":1},{"content":"项目可能需要术语表","category":"fact","source":2,"quote":"可能需要术语表","basis":"stated","scope":"workspace"}]}"#
+            case "invalid-source":
+                output = #"{"memories":[{"content":"invented","source":1,"quote":"never said","basis":"stated","scope":"space"}]}"#
             case "memory-visibility":
                 let wireBody = String(decoding: data, as: UTF8.self)
-                if user.contains("enabled-memory-fixture") && !wireBody.contains("disabled-memory-fixture") {
+                if user.contains("enabled-memory-fixture") && !wireBody.contains("disabled-memory-fixture") && !wireBody.contains("unrelated-secret") {
                     output = #"{"memories":[{"content":"disabled-memory-fixture-0","category":"fact"}]}"#
                 } else {
                     output = "incorrect stored memory visibility"
@@ -9616,6 +9644,15 @@ struct AutomaticMemoryExtractionTests {
         return MemoryService(databaseQueue: queue)
     }
 
+    private func service(sessionID: UUID, messages: [ChatMessage]) async throws -> MemoryService {
+        let queue = try DatabaseQueue()
+        try DatabaseBootstrap.prepareSpace(queue)
+        var session = ChatSession(id: sessionID)
+        session.messages = messages
+        try await SessionService(databaseQueue: queue).save(session)
+        return MemoryService(databaseQueue: queue)
+    }
+
     @Test("两种协议均分离任务指令与隐私数据，去重并保留来源", arguments: [false, true])
     func extractionBoundaryAndPersistence(anthropic: Bool) async throws {
         let memory = try service()
@@ -9642,7 +9679,9 @@ struct AutomaticMemoryExtractionTests {
     @Test("提炼请求只附带启用记忆，停用项仍在本机去重", arguments: [false, true])
     func disabledMemoryStaysLocal(anthropic: Bool) async throws {
         let memory = try service()
-        var enabled = MemoryItem(content: "enabled-memory-fixture")
+        var enabled = MemoryItem(content: "private-note enabled-memory-fixture")
+        let unrelated = MemoryItem(content: "unrelated-secret")
+        try await memory.save(unrelated)
         enabled.createdAt = Date(timeIntervalSince1970: 0)
         try await memory.save(enabled)
         for index in 0..<40 {
@@ -9652,8 +9691,8 @@ struct AutomaticMemoryExtractionTests {
         let distiller = MemoryDistiller(provider: provider(model: "memory-visibility", anthropic: anthropic), memoryService: memory)
         let additions = try await distiller.distill(transcript: "User: private-note")
         #expect(additions.isEmpty)
-        #expect(try await memory.getEnabled().map(\.id) == [enabled.id])
-        #expect(try await memory.getAll().count == 41)
+        #expect(try await Set(memory.getEnabled().map(\.id)) == [enabled.id, unrelated.id])
+        #expect(try await memory.getAll().count == 42)
     }
 
     @Test("无效、空白、截断或结构不完整的响应不能冒充空结果", arguments: ["malformed", "invalid-entry", "blank", "prose"])
@@ -9681,6 +9720,40 @@ struct AutomaticMemoryExtractionTests {
         #expect(await MemoryDistiller.classify("private-note", provider: provider(model: "classify", anthropic: anthropic)) == .preference)
     }
 
+    @Test("手动新增默认可离线保存，显式选择自动分类才需要指定接收方")
+    func localClassificationDefault() async {
+        #expect(await MemoryCategoryChoice.initial.category(for: "private-note", recipient: nil) == .other)
+        #expect(await MemoryCategoryChoice.value(.decision).category(for: "private-note", recipient: nil) == .decision)
+        #expect(await MemoryCategoryChoice.auto.category(for: "private-note", recipient: nil) == nil)
+        let recipient = provider(model: "classify")
+        #expect(recipient.displayDestination == "stub (stub.invalid)")
+        #expect(await MemoryCategoryChoice.auto.category(for: "private-note", recipient: recipient) == .preference)
+    }
+
+    @Test("升级为旧数据库建立中文索引，保留手动条目和用户停用的历史记忆")
+    func migrateHistoricalMemories() async throws {
+        let queue = try DatabaseQueue()
+        let enabled = UUID(), disabled = UUID(), duplicate = UUID()
+        try await queue.write { db in
+            try db.execute(sql: """
+                CREATE TABLE memories(id TEXT PRIMARY KEY, content TEXT NOT NULL, isEnabled INTEGER NOT NULL, createdAt DATETIME NOT NULL)
+                """)
+            let insert = try db.makeStatement(sql: "INSERT INTO memories VALUES (?, ?, ?, ?)")
+            try insert.execute(arguments: [enabled.uuidString, "项目周报导出 PDF", true, Date()])
+            try insert.execute(arguments: [duplicate.uuidString, "项目周报导出 PDF", true, Date()])
+            try insert.execute(arguments: [disabled.uuidString, "Draft  sample", false, Date()])
+        }
+        try DatabaseBootstrap.prepareSpace(queue)
+        let memory = MemoryService(databaseQueue: queue)
+        let matches = try await memory.search("周报用哪种格式")
+        #expect(Set(matches.map(\.id)) == [enabled, duplicate])
+        #expect(matches.allSatisfy { $0.revision == 0 && $0.workspaceID == nil && !$0.alwaysInclude && $0.sourceBasis == nil })
+        #expect(try await memory.search("draft").isEmpty)
+        #expect(try await memory.search("draft", includeDisabled: true).map(\.id) == [disabled])
+        #expect(try await memory.commitExtraction([MemoryItem(content: "DRAFT sample")], checkpoint: nil).isEmpty)
+        #expect(try await memory.getAll().count == 3)
+    }
+
     @Test("落库中途失败会抛错，恢复后重试保留已有项且不重复保存")
     func persistenceFailureAndRetry() async throws {
         let queue = try DatabaseQueue()
@@ -9697,10 +9770,10 @@ struct AutomaticMemoryExtractionTests {
         await #expect(throws: DatabaseError.self) {
             try await distiller.distill(transcript: "User: private-note")
         }
-        #expect(try await memory.getAll().count == 1)
+        #expect(try await memory.getAll().isEmpty)
         try await queue.write { try $0.execute(sql: "DROP TRIGGER fail_memory_save") }
         let recovered = try await distiller.distill(transcript: "User: private-note")
-        #expect(recovered.count == 1)
+        #expect(recovered.count == 2)
         #expect(try await memory.getAll().count == 2)
     }
 
@@ -9713,24 +9786,157 @@ struct AutomaticMemoryExtractionTests {
         }
     }
 
-    @Test("未达阈值跳过、在途阻止重复、失败可重试、成功推进且不同会话独立")
-    func progressAndRetry() {
-        var progress = MemoryDistillProgress()
-        let a = UUID(), b = UUID()
-        func begin(_ id: UUID, _ rounds: Int) -> Bool {
-            progress.begin(sessionID: id, rounds: rounds, interval: 5)
+    @MainActor @Test("Only complete eligible rounds after the durable source checkpoint enter the next extraction")
+    func progressAndRetry() async throws {
+        let pairs = (1...12).flatMap { i in
+            [ChatMessage(role: .user, content: "Q\(i)"), ChatMessage(role: .assistant, content: "A\(i)")]
         }
-        #expect(!begin(a, 4))
-        #expect(begin(a, 5))
-        #expect(!begin(a, 6))
-        #expect(begin(b, 5))
-        progress.finish(sessionID: a, successfulRounds: nil)
-        #expect(begin(a, 6))
-        progress.finish(sessionID: a, successfulRounds: 6)
-        #expect(!begin(a, 10))
-        #expect(begin(a, 11))
-        #expect(!begin(b, 10))
-        progress.finish(sessionID: b, successfulRounds: 5)
-        #expect(begin(b, 10))
+        let end = try #require(pairs.last?.id)
+        #expect(ChatViewModel.memoryBatch(in: Array(pairs.prefix(8)), through: pairs[7].id, after: nil) == nil)
+        let first = try #require(ChatViewModel.memoryBatch(in: pairs, through: pairs[9].id, after: nil))
+        #expect(first == Array(pairs.prefix(10)))
+        let next = try #require(ChatViewModel.memoryBatch(in: pairs, through: end, after: pairs[9].id))
+        #expect(next == Array(pairs[10..<20]))
+        #expect(ChatViewModel.memoryBatch(in: pairs, through: end, after: pairs[19].id) == nil)
+        #expect(ChatViewModel.memoryBatch(in: pairs, through: pairs[9].id, after: pairs[19].id) == nil)
+        var excluded = pairs
+        excluded[10].memoryExcluded = true
+        let filtered = try #require(ChatViewModel.memoryBatch(in: excluded, through: end, after: pairs[9].id))
+        #expect(filtered.first?.id == pairs[12].id && !filtered.contains { $0.id == pairs[11].id })
+        var failed = Array(pairs.prefix(10))
+        failed[3].runStatus = .cancelled
+        #expect(ChatViewModel.memoryBatch(in: failed, through: failed[9].id, after: nil) == nil)
     }
+
+    @MainActor @Test("移动过项目的会话按每轮实际工作区分别提炼")
+    func extractionAcrossWorkspaceMove() {
+        let older = UUID(), newer = UUID()
+        var report = RequestContextReport()
+        report.resourceContext = RunResourceContext(space: .work, workspaceID: older)
+        let pairs = [ChatMessage(role: .user, content: "old project"), ChatMessage(role: .assistant, content: "old answer", contextReport: report),
+                     ChatMessage(role: .user, content: "new project"), ChatMessage(role: .assistant, content: "new answer")]
+        let groups = ChatViewModel.memoryWorkspaceGroups(pairs, fallback: newer)
+        #expect(groups.map(\.workspaceID) == [older, newer])
+        #expect(groups.map(\.messages) == [Array(pairs.prefix(2)), Array(pairs.suffix(2))])
+    }
+
+    @Test("Concurrent sessions add one copy, empty batches persist and an old cursor cannot move back")
+    func atomicBatches() async throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: path) }
+        let file = path.appendingPathComponent("work.sqlite").path
+        var config = Configuration()
+        config.busyMode = .timeout(5)
+        let q = try DatabaseQueue(path: file, configuration: config)
+        try DatabaseBootstrap.prepareSpace(q)
+        let memory = MemoryService(databaseQueue: q)
+        let other = MemoryService(databaseQueue: try DatabaseQueue(path: file, configuration: config))
+        let a = MemoryExtractionCheckpoint(sessionID: UUID(), after: nil, through: UUID())
+        let b = MemoryExtractionCheckpoint(sessionID: UUID(), after: nil, through: UUID())
+        let sessions = SessionService(databaseQueue: q)
+        try await sessions.save(ChatSession(id: a.sessionID))
+        try await sessions.save(ChatSession(id: b.sessionID))
+        async let one = memory.commitExtraction([MemoryItem(content: "Shared  fact")], checkpoint: a)
+        async let two = other.commitExtraction([MemoryItem(content: "SHARED fact")], checkpoint: b)
+        let (first, second) = try await (one, two)
+        #expect(first.count + second.count == 1)
+        let reopened = MemoryService(databaseQueue: try DatabaseQueue(path: file))
+        #expect(try await reopened.extractionCursor(sessionID: a.sessionID) == a.through)
+        #expect(try await reopened.extractionCursor(sessionID: b.sessionID) == b.through)
+        #expect(try await reopened.commitExtraction([MemoryItem(content: "stale")], checkpoint: a).isEmpty)
+        let advance = MemoryExtractionCheckpoint(sessionID: a.sessionID, after: a.through, through: UUID())
+        _ = try await reopened.commitExtraction([], checkpoint: advance)
+        #expect(try await reopened.extractionCursor(sessionID: a.sessionID) == advance.through)
+        #expect(try await reopened.getAll().count == 1)
+        try await sessions.delete(id: a.sessionID)
+        #expect(try await reopened.extractionCursor(sessionID: a.sessionID) == nil)
+        #expect(try await reopened.commitExtraction([MemoryItem(content: "orphan")], checkpoint: a).isEmpty)
+    }
+
+    @MainActor @Test("Undo uses the written revision, preserves later edits and reports the actual count")
+    func undoAfterRoundTrip() async throws {
+        let q = try DatabaseQueue()
+        try DatabaseBootstrap.prepareSpace(q)
+        let hub = Hub(spaceStore: SpaceStore(space: .work, databaseQueue: q))
+        let model = ChatViewModel(hub: hub, space: .work, observeHostServices: false, draftDefaults: nil)
+        let memory = MemoryService(databaseQueue: q)
+        let session = UUID()
+        var unchanged = MemoryItem(content: "unchanged"), edited = MemoryItem(content: "old")
+        let external = MemoryItem(content: "externally updated")
+        unchanged.createdAt = Date(timeIntervalSince1970: 1_700_000_000.000321)
+        unchanged.sourceSessionID = session; edited.sourceSessionID = session
+        let saved = try await memory.commitExtraction([unchanged, edited, external], checkpoint: nil)
+        try await memory.updateContent(id: edited.id, content: "edited", category: .fact)
+        try await q.write { db in
+            try db.execute(sql: "UPDATE memories SET content = ? WHERE id = ?", arguments: ["changed in SQLite", external.id.uuidString])
+        }
+        model.recentlyAddedMemories[session] = saved
+        await model.undoAutomaticMemories(sessionID: session)
+        #expect(model.undoneMemoryCounts[session] == 1)
+        #expect(try await Set(memory.getEnabled().map(\.id)) == [edited.id, external.id])
+        #expect(try await memory.undoExtraction(saved) == 0)
+    }
+
+    @Test("Validated source messages and workspace-specific corrections survive extraction and undo", arguments: [false, true])
+    func attributedExtraction(anthropic: Bool) async throws {
+        let project = UUID(), other = UUID(), session = UUID()
+        let messages = [ChatMessage(role: .user, content: "private-note 本项目改用英文"), ChatMessage(role: .assistant, content: "可能需要术语表")]
+        let memory = try await service(sessionID: session, messages: messages)
+        var general = MemoryItem(content: "日常用中文", category: .preference)
+        general.alwaysInclude = true
+        var old = MemoryItem(content: "本项目改用中文，项目报告使用中文", category: .decision)
+        old.workspaceID = project; old.sourceBasis = .stated
+        try await memory.save(general); try await memory.save(old)
+        let batch = MemoryExtractionCheckpoint(sessionID: session, after: nil, through: messages[1].id)
+        let distiller = MemoryDistiller(provider: provider(model: "sources", anthropic: anthropic), memoryService: memory)
+        let saved = try await distiller.distill(messages: messages, checkpoint: batch, workspaceID: project)
+        #expect(saved.count == 2)
+        let explicit = try #require(saved.first)
+        #expect(explicit.sourceMessageID == messages[0].id && explicit.sourceQuote == "本项目改用英文")
+        #expect(explicit.sourceBasis == .stated && explicit.workspaceID == project)
+        #expect(saved.last?.sourceBasis == .inferred && saved.last?.sourceMessageID == messages[1].id)
+        #expect(try await memory.fetch(id: old.id)?.isEnabled == false)
+        #expect(try await memory.fetch(id: general.id)?.isEnabled == true)
+        #expect(try await memory.forRun(in: other).search("本项目改用英文").isEmpty)
+        #expect(try await memory.undoExtraction(saved) == 2)
+        #expect(try await memory.fetch(id: old.id)?.isEnabled == true)
+        #expect(try await memory.extractionCursor(sessionID: session) == batch.through)
+    }
+
+    @Test("Invalid evidence fails atomically and leaves the source window available for retry")
+    func invalidSource() async throws {
+        let messages = [ChatMessage(role: .user, content: "private-note example")]
+        let batch = MemoryExtractionCheckpoint(sessionID: UUID(), after: nil, through: messages[0].id)
+        let memory = try await service(sessionID: batch.sessionID, messages: messages)
+        let distiller = MemoryDistiller(provider: provider(model: "invalid-source"), memoryService: memory)
+        await #expect(throws: MemoryDistiller.ExtractionError.self) {
+            try await distiller.distill(messages: messages, checkpoint: batch, workspaceID: UUID())
+        }
+        #expect(try await memory.getAll().isEmpty)
+        #expect(try await memory.extractionCursor(sessionID: batch.sessionID) == nil)
+    }
+
+    @Test("取消提炼会在发送前和写库前核对当前权限", arguments: [true, false])
+    func extractionPermissionRevoked(beforeRequest: Bool) async throws {
+        actor Gate {
+            var remaining: Int
+            init(_ remaining: Int) { self.remaining = remaining }
+            func permits() -> Bool {
+                guard remaining > 0 else { return false }
+                remaining -= 1
+                return true
+            }
+        }
+        let gate = Gate(beforeRequest ? 0 : 1)
+        let messages = [ChatMessage(role: .user, content: "private-note")]
+        let checkpoint = MemoryExtractionCheckpoint(sessionID: UUID(), after: nil, through: messages[0].id)
+        let memory = try await service(sessionID: checkpoint.sessionID, messages: messages)
+        let distiller = MemoryDistiller(provider: provider(model: beforeRequest ? "http-error" : "empty"), memoryService: memory)
+        await #expect(throws: CancellationError.self) {
+            try await distiller.distill(messages: messages, checkpoint: checkpoint, workspaceID: nil) { await gate.permits() }
+        }
+        #expect(try await memory.extractionCursor(sessionID: checkpoint.sessionID) == nil)
+    }
+
 }

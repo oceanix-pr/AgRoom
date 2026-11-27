@@ -96,10 +96,10 @@ struct SpaceDatabaseBackupStore: Sendable {
         "mail_accounts", "mail_folders", "mail_messages", "mail_bodies", "mail_attachments", "mail_drafts", "mail_raw_messages", "mail_agent_draft_receipts",
         "mail_sync_coverage", "mail_pending_flags", "mail_import_batches", "mail_import_origins", "mail_import_entries", "mail_import_undos", "mail_saved_searches", "mail_folder_preferences", "mail_folder_mutations", "mail_server_drafts", "scheduled_tasks", "scheduled_runs",
         "mcp_servers", "mysql_connections", "product_preferences", "product_events", "workspace_projects", "team_tasks", "team_discussions", "product_task_runs", "product_job_runs", "product_task_center_cleared", "artifact_versions",
-        "execution_goals", "goal_attempts", "goal_events"
+        "execution_goals", "goal_attempts", "goal_events", "memory_extraction_progress"
     ]
     private static let coreTables: Set<String> = [
-        "chat_sessions", "chat_messages", "chat_message_quarantine", "memories", "skills", "provider_usage", "chat_restore_tokens"
+        "chat_sessions", "chat_messages", "chat_message_quarantine", "memories", "memory_terms", "skills", "provider_usage", "chat_restore_tokens"
     ]
     static let maximumBytes = 256 * 1024 * 1024
     private static let maximumRows = 500_000

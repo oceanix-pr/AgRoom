@@ -100,20 +100,13 @@ struct MemoryListTool: DispatcherTool {
             rawValue: ToolArguments.string(args, "category").lowercased()
         )
 
-        var items = try await service.getAll()
-        if !includeDisabled {
-            items = items.filter(\.isEnabled)
-        }
-        if let category {
-            items = items.filter { $0.category == category }
-        }
+        let (items, total) = try await service.list(category: category, includeDisabled: includeDisabled, limit: limit)
         guard !items.isEmpty else {
             return "No memories found."
         }
-        let total = items.count
-        let lines = items.prefix(limit).map { item in
+        let lines = items.map { item in
             let state = item.isEnabled ? "on" : "off"
-            return "- \(item.content) [\(item.category.rawValue), \(state)] (id: \(item.id.uuidString))"
+            return "- \(item.promptDescription) [\(item.category.rawValue), \(state)] (id: \(item.id.uuidString))"
         }
         let suffix = total > lines.count ? "\n\nShowing \(lines.count) of \(total)." : ""
         return "\(total) memories:\n" + lines.joined(separator: "\n") + suffix
@@ -128,7 +121,7 @@ struct MemoryUpdateTool: DispatcherTool {
         ToolDefinition(
             name: "memory_update",
             description: "Update one memory by id: change its content, category or enabled state. "
-                + "Omitted fields keep their current value. Get the id from memory_list or memory_search.",
+                + "Omitted fields keep their current value. Get the id from memory_list.",
             parametersSchemaJSON: #"{"type":"object","properties":{"id":{"type":"string","description":"Id of the memory to update"},"content":{"type":"string","description":"New content; omit to keep the current text"},"category":{"type":"string","enum":["preference","fact","decision","entity","other"]},"enabled":{"type":"boolean","description":"Turn this memory on or off"}},"required":["id"]}"#
         )
     }
@@ -142,7 +135,7 @@ struct MemoryUpdateTool: DispatcherTool {
         guard let id = UUID(uuidString: rawID) else {
             throw LLMError.configurationError(reason: "memory_update requires a valid 'id' (UUID)")
         }
-        guard let existing = try await service.getAll().first(where: { $0.id == id }) else {
+        guard let existing = try await service.fetch(id: id) else {
             throw LLMError.configurationError(reason: "No memory found with id \(rawID)")
         }
 
@@ -167,7 +160,7 @@ struct MemoryUpdateTool: DispatcherTool {
         if let enabled = args["enabled"] as? Bool {
             updated.isEnabled = enabled
         }
-        try await service.save(updated)
+        try await service.edit(updated)
         return "Updated memory [\(updated.category.rawValue), \(updated.isEnabled ? "on" : "off")]: \(updated.content)"
     }
 }
@@ -195,15 +188,14 @@ struct MemoryDeleteTool: DispatcherTool {
             throw LLMError.configurationError(reason: "memory_delete requires 'id' or 'content_match'")
         }
 
-        let items = try await service.getAll()
         let target: MemoryItem
         if !rawID.isEmpty {
-            guard let found = items.first(where: { $0.id.uuidString == rawID }) else {
+            guard let id = UUID(uuidString: rawID), let found = try await service.fetch(id: id) else {
                 throw LLMError.configurationError(reason: "No memory found with id \(rawID)")
             }
             target = found
         } else {
-            let hits = items.filter { $0.content.localizedCaseInsensitiveContains(match) }
+            let hits = try await service.getAll().filter { $0.content.localizedCaseInsensitiveContains(match) }
             guard !hits.isEmpty else {
                 throw LLMError.configurationError(reason: "No memory contains \"\(match)\"")
             }

@@ -30,8 +30,32 @@ enum MemoryCategoryChoice: Hashable, Identifiable {
         }
     }
 
-    /// 下拉顺序：自动判断在首位，其余按枚举顺序
-    static let all: [MemoryCategoryChoice] = [.auto] + MemoryCategory.allCases.map(MemoryCategoryChoice.value)
+    static let all: [MemoryCategoryChoice] = MemoryCategory.allCases.map(MemoryCategoryChoice.value) + [.auto]
+    static let initial = MemoryCategoryChoice.value(.other)
+
+    func category(for text: String, recipient: CloudProvider?) async -> MemoryCategory? {
+        switch self {
+        case .value(let category): return category
+        case .auto:
+            guard let recipient else { return nil }
+            return await MemoryDistiller.classify(text, provider: recipient)
+        }
+    }
+}
+
+struct MemoryScopePicker: View {
+    @Binding var selection: UUID?
+    let workspaces: [ChatWorkspace]
+
+    var body: some View {
+        Picker(L.string("memory.scope"), selection: $selection) {
+            Text(L.string("memory.scope.space")).tag(UUID?.none)
+            ForEach(workspaces) { workspace in Text(workspace.name).tag(Optional(workspace.id)) }
+            if let selection, !workspaces.contains(where: { $0.id == selection }) {
+                Text(L.string("memory.scope.missing")).tag(Optional(selection))
+            }
+        }
+    }
 }
 
 // MARK: - Memory View
@@ -41,13 +65,17 @@ public struct MemoryView: View {
     let hub: Hub
     private let space: AppSpace
     private let sourceID: UUID?
-    /// 工具栏搜索词：过滤记忆列表（内容命中，大小写不敏感）
+    /// 工具栏搜索使用与聊天相同的本地记忆索引。
     @Environment(\.globalSearchText) private var searchText
 
     @State private var memories: [MemoryItem] = []
     @State private var editingMemory: MemoryItem?
     @State private var newContent = ""
-    @State private var newCategory: MemoryCategoryChoice = .auto
+    @State private var newCategory = MemoryCategoryChoice.initial
+    @State private var newWorkspaceID: UUID?
+    @State private var workspaces: [ChatWorkspace] = []
+    @State private var classificationProvider: CloudProvider?
+    @State private var providerVersion = 0
     /// nil = 全部类别
     @State private var categoryFilter: MemoryCategory?
     @State private var isAddingMemory = false
@@ -89,16 +117,25 @@ public struct MemoryView: View {
                 .frame(width: 110)
                 .disabled(isAddingMemory)
 
+                MemoryScopePicker(selection: $newWorkspaceID, workspaces: workspaces)
+                    .labelsHidden().frame(maxWidth: 160).disabled(isAddingMemory)
                 Button(action: addMemory) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 24))
                 }
                 .buttonStyle(.plain)
                 .disabled(isAddingMemory
+                    || (newCategory == .auto && classificationProvider == nil)
                     || newContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
+
+            if newCategory == .auto {
+                Text(classificationProvider.map { L.format("memory.classify.recipient", $0.displayDestination) }
+                     ?? L.string("memory.classify.unavailable"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
 
             Divider()
 
@@ -125,7 +162,7 @@ public struct MemoryView: View {
 
             Divider()
 
-            let visibleMemories = filteredMemories
+            let visibleMemories = memories.filter { categoryFilter == nil || $0.category == categoryFilter }
             if visibleMemories.isEmpty {
                 ContentUnavailableView(
                     L.string("memory.empty"),
@@ -179,15 +216,32 @@ public struct MemoryView: View {
                 }
             }
         }
+        .task(id: searchText) { await load() }
         .task(id: sourceID) {
-            await load()
-            guard !Task.isCancelled, hub.spaceStore.current == space, let sourceID else { return }
-            if let target = memories.first(where: { $0.id == sourceID }) { categoryFilter = nil; editingMemory = target }
+            workspaces = WorkspaceRegistry.shared.workspaces(for: space)
+            guard let sourceID else { return }
+            let target = try? await hub.makeMemoryService(for: space)?.fetch(id: sourceID)
+            guard !Task.isCancelled, hub.spaceStore.current == space else { return }
+            if let target { categoryFilter = nil; editingMemory = target }
             else { errorMessage = L.errorDescription(SpaceSearchError.missing); showErrorAlert = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: WorkspaceRegistry.didChange)) { _ in
+            workspaces = WorkspaceRegistry.shared.workspaces(for: space)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: ProviderConfigService.configurationDidChange)) { _ in
+            classificationProvider = nil
+            providerVersion += 1
+        }
+        .task(id: newCategory == .auto ? providerVersion : nil) {
+            classificationProvider = nil
+            guard newCategory == .auto else { return }
+            let provider = try? await hub.makeActiveProvider(for: space, source: "memory-classification")
+            guard !Task.isCancelled, newCategory == .auto, hub.spaceStore.current == space else { return }
+            classificationProvider = provider
         }
         .sheet(item: $editingMemory) { memory in
             if let service = hub.makeMemoryService(for: space) {
-                MemoryEditorSheet(memory: memory, service: service, sessionService: hub.makeSessionService(for: space)) { Task { await load() } }
+                MemoryEditorSheet(memory: memory, service: service, sessionService: hub.makeSessionService(for: space), workspaces: workspaces) { Task { await load() } }
             }
         }
         .confirmationDialog(
@@ -213,19 +267,6 @@ public struct MemoryView: View {
         }
     }
 
-    /// 搜索词 + 类别筛选后的记忆（内容命中，大小写不敏感）
-    private var filteredMemories: [MemoryItem] {
-        var result = memories
-        if let categoryFilter {
-            result = result.filter { $0.category == categoryFilter }
-        }
-        let query = searchText.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return result }
-        return result.filter {
-            $0.content.localizedCaseInsensitiveContains(query)
-        }
-    }
-
     private func load() async {
         guard let service = hub.makeMemoryService(for: space) else {
             errorMessage = L.string("error.actionable.memory_load")
@@ -233,8 +274,10 @@ public struct MemoryView: View {
             return
         }
         do {
-            let loaded = try await service.getAll()
-            guard !Task.isCancelled, hub.spaceStore.current == space else { return }
+            let query = searchText
+            let loaded = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? try await service.getAll() : try await service.search(query, limit: Int.max, includeDisabled: true)
+            guard !Task.isCancelled, hub.spaceStore.current == space, query == searchText else { return }
             memories = loaded
         } catch {
             if !Task.isCancelled, hub.spaceStore.current == space {
@@ -248,6 +291,9 @@ public struct MemoryView: View {
         let content = newContent.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !content.isEmpty, !isAddingMemory else { return }
         let choice = newCategory
+        let recipient = classificationProvider
+        guard choice != .auto || recipient != nil else { return }
+        let scope = newWorkspaceID
         isAddingMemory = true
         Task {
             defer { isAddingMemory = false }
@@ -257,9 +303,11 @@ public struct MemoryView: View {
                     showErrorAlert = true
                     return
                 }
-                let category = await resolveCategory(for: choice, content: content)
+                guard let category = await choice.category(for: content, recipient: recipient) else { return }
                 guard !Task.isCancelled, hub.spaceStore.current == space else { return }
-                try await service.save(MemoryItem(content: content, category: category))
+                var item = MemoryItem(content: content, category: category)
+                item.workspaceID = scope
+                try await service.save(item)
                 if newContent.trimmingCharacters(in: .whitespacesAndNewlines) == content {
                     newContent = ""
                 }
@@ -270,17 +318,6 @@ public struct MemoryView: View {
                     showErrorAlert = true
                 }
             }
-        }
-    }
-
-    /// 「自动判断」交给模型归类；无可用提供者或归类失败时回退「其他」，不阻断保存
-    private func resolveCategory(for choice: MemoryCategoryChoice, content: String) async -> MemoryCategory {
-        switch choice {
-        case .value(let category):
-            return category
-        case .auto:
-            guard let provider = try? await hub.makeActiveProvider(for: space, source: "memory-classification") else { return .other }
-            return await MemoryDistiller.classify(content, provider: provider)
         }
     }
 

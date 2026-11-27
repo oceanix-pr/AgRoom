@@ -458,7 +458,17 @@
 "memory.disable" = "停用";
 "memory.enable.label" = "啟用記憶「%@」";
 "memory.disable.label" = "停用記憶「%@」";
-"memory.category.auto" = "自動判斷";
+"memory.category.auto" = "用模型分類";
+"memory.scope" = "適用範圍";
+"memory.scope.space" = "整個空間";
+"memory.scope.missing" = "原工作區（目前無法使用）";
+"memory.always.include" = "在此範圍內的不同話題中都使用這條偏好";
+"memory.classify.recipient" = "儲存時會將這則筆記傳送給 %@ 進行分類。";
+"memory.classify.unavailable" = "選擇具體類別即可在本機儲存，也可啟用模型進行分類。";
+"memory.source.stated" = "提煉依據 · 使用者明確表達";
+"memory.source.inferred" = "提煉依據 · 模型推斷";
+"memory.undo.count" = "已停用本批次新增記憶 %d 則。";
+"memory.edit.stale" = "這則記憶已變更或刪除，請重新開啟查看最新內容。";
 "memory.category.preference" = "偏好";
 "memory.category.fact" = "事實";
 "memory.category.decision" = "決策";
@@ -637,7 +647,7 @@
 "settings.privacy.spaces" = "生活空間與工作空間為物理隔離的獨立資料庫。";
 "settings.memory" = "記憶";
 "settings.memory.auto" = "自動生成記憶";
-"settings.memory.auto.desc" = "每進行若干輪對話後，於背景自動提煉長期記憶。提煉結果會靜默儲存，可於記憶頁隨時刪除。";
+"settings.memory.auto.desc" = "每完成五輪符合條件的問答，應用程式會將對話片段和最多三則相關記憶摘錄傳給模型。新增的記憶可在聊天中復原。";
 "settings.backup" = "備份與復原";
 "settings.backup.desc" = "依清單保護目前空間的對話、記憶、技能及版本、知識、智體、郵箱、排程任務、連線設定、小應用資料、使用者資料庫與受管專案檔案。還原前可預覽涵蓋範圍，還原後核對並保留回退點。";
 "settings.backup.export" = "匯出備份…";

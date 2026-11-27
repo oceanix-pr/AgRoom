@@ -322,6 +322,9 @@ public enum DatabaseBootstrap {
         migrator.registerMigration("v1_note_cipher_cleanup") { db in
             try db.execute(sql: "CREATE TABLE note_cipher_cleanup (id INTEGER PRIMARY KEY CHECK(id = 1), generation TEXT NOT NULL)")
         }
+        migrator.registerMigration("v4_memory_recall_and_extraction") { db in
+            try MemoryService.migrateRecall(db)
+        }
         try migrator.migrate(queue)
     }
 }

@@ -340,7 +340,7 @@ public enum EngineAssembly {
         else { resourceContext = try await WorkspaceProjectStore(databaseQueue: queue, space: space).context(workspaceID: registeredWorkspace.id) }
         guard resourceContext.isValid, resourceContext.space == space,
               resourceContext.workspaceID == registeredWorkspace.id else { throw WorkspaceProjectError.wrongWorkspace }
-        let memories = resourceContext.excludesMemory ? [] : ((try? await memoryService.getAll()) ?? [])
+        let runMemory = resourceContext.excludesMemory ? nil : memoryService.forRun(in: resourceContext.workspaceID)
         let workspaceRoots = registeredWorkspace.folderURLs
         let workspaceURL = Self.resolveWorkspaceURL(settings.workspacePath, allowing: workspaceRoots)
         let pythonWorkspace = workspaceURL ?? registeredWorkspace.url
@@ -534,7 +534,7 @@ public enum EngineAssembly {
         var allTools = DispatcherToolFactory.buildTools(
             provider: provider,
             agents: agents,
-            memoryService: resourceContext.excludesMemory ? nil : memoryService,
+            memoryService: runMemory,
             agentProviderResolver: AgentProviderResolver(configurations: try await providerService.getAll(), parameterService: providerService.modelParameters),
             knowledgeService: knowledgeService,
             skillStore: skillStore,
@@ -632,7 +632,16 @@ public enum EngineAssembly {
         ).filter { resourceContext.permitsTool(named: $0.definition.name) && taskScope.allowsTool(named: $0.definition.name) }
         let availableToolNames = Set(tools.map { $0.definition.name })
 
-        let contextMemories = scheduledContext == nil ? PromptContextSelection.memories(memories, query: query) : []
+        let contextMemories: [MemoryItem]
+        if scheduledContext == nil, let runMemory {
+            do {
+                let candidates = try await runMemory.search(query, limit: 48, includePinned: true)
+                contextMemories = PromptContextSelection.budgetedMemories(candidates)
+            } catch {
+                HubLogger.shared.warning("Memory recall unavailable for this request")
+                contextMemories = []
+            }
+        } else { contextMemories = [] }
         let preferredSkills = Set(resourceContext.project?.configuration.preferredSkillNames ?? [])
         var contextSkills = PromptContextSelection.skills(skills, query: query, preferred: preferredSkills)
         let contextAgents = PromptContextSelection.agents(agents, query: query)

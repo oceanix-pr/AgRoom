@@ -234,7 +234,7 @@ public struct DispatcherTeamWorkerFactory: TeamWorkerFactory {
         self.provider = provider
         self.agents = agents
         self.agentProviderResolver = agentProviderResolver
-        self.memoryService = resourceContext?.excludesMemory == true ? nil : memoryService
+        self.memoryService = resourceContext?.excludesMemory == true ? nil : memoryService?.forRun(in: resourceContext?.workspaceID)
         self.knowledgeService = knowledgeService
         self.fileAreaService = fileAreaService
         self.parentPermissionPolicy = parentPermissionPolicy

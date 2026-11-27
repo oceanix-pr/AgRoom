@@ -221,11 +221,15 @@ struct MemoryEditorSheet: View {
     let memory: MemoryItem
     let service: MemoryService
     let sessionService: SessionService?
+    let workspaces: [ChatWorkspace]
     let onSaved: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var content = ""
     @State private var category: MemoryCategory = .other
-    @State private var source: [ChatMessage] = []
+    @State private var workspaceID: UUID?
+    @State private var alwaysInclude = false
+    @State private var source: [ChatMessage]?
+    @State private var showsSource = false
     @State private var errorText: String?
     @State private var saving = false
 
@@ -236,19 +240,32 @@ struct MemoryEditorSheet: View {
             Picker(L.string("memory.category.label"), selection: $category) {
                 ForEach(MemoryCategory.allCases, id: \.self) { category in Text(category.localizedLabel).tag(category) }
             }
+            MemoryScopePicker(selection: $workspaceID, workspaces: workspaces)
+            if category == .preference {
+                Toggle(L.string("memory.always.include"), isOn: $alwaysInclude)
+            }
+            if let basis = memory.sourceBasis, let quote = memory.sourceQuote {
+                Text(L.string(basis == .stated ? "memory.source.stated" : "memory.source.inferred")).font(.caption)
+                Text(verbatim: quote).textSelection(.enabled)
+            }
             if memory.sourceSessionID != nil {
-                DisclosureGroup(L.string("product.memory.source")) {
-                    if source.isEmpty { Text(L.string("product.memory.source.missing")).font(.caption) }
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(source) { message in
-                                    Text(message.content).textSelection(.enabled).id(message.id)
-                                        .padding(8).background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                DisclosureGroup(L.string("product.memory.source"), isExpanded: $showsSource) {
+                    if let source, !source.isEmpty {
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                LazyVStack(alignment: .leading, spacing: 10) {
+                                    ForEach(source) { message in
+                                        Text(message.content).textSelection(.enabled).id(message.id)
+                                            .padding(8).background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                                    }
                                 }
-                            }
-                        }.frame(maxHeight: 220)
-                            .onAppear { if let id = memory.sourceMessageID { proxy.scrollTo(id, anchor: .center) } }
+                            }.frame(maxHeight: 220)
+                                .onAppear { if let id = memory.sourceMessageID { proxy.scrollTo(id, anchor: .center) } }
+                        }
+                    } else if source == nil {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text(L.string("product.memory.source.missing")).font(.caption)
                     }
                 }
             } else { Text(L.string("product.memory.source.manual")).font(.caption).foregroundStyle(.secondary) }
@@ -260,16 +277,29 @@ struct MemoryEditorSheet: View {
                     saving = true
                     Task {
                         do {
-                            try await service.updateContent(id: memory.id, content: content.trimmingCharacters(in: .whitespacesAndNewlines), category: category)
+                            var updated = memory
+                            updated.content = content.trimmingCharacters(in: .whitespacesAndNewlines)
+                            updated.category = category
+                            updated.workspaceID = workspaceID
+                            updated.alwaysInclude = alwaysInclude && category == .preference
+                            try await service.edit(updated)
                             onSaved(); dismiss()
+                        } catch MemoryService.StoreError.stale {
+                            onSaved()
+                            errorText = L.string("memory.edit.stale"); saving = false
                         } catch { errorText = L.string("error.database"); saving = false }
                     }
                 }.disabled(saving || content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }.padding(20).frame(width: 620)
-        .onAppear { content = memory.content; category = memory.category }
-        .task {
-            if let id = memory.sourceSessionID { source = (try? await sessionService?.getMessages(id: id)) ?? [] }
+        .onAppear {
+            content = memory.content; category = memory.category
+            workspaceID = memory.workspaceID; alwaysInclude = memory.alwaysInclude
+        }
+        .task(id: showsSource) {
+            guard showsSource, source == nil, let id = memory.sourceSessionID else { return }
+            let messages = (try? await sessionService?.getMessages(id: id)) ?? []
+            if !Task.isCancelled { source = messages }
         }
     }
 }

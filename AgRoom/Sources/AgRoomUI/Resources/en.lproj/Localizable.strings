@@ -458,7 +458,17 @@
 "memory.disable" = "Disable";
 "memory.enable.label" = "Enable memory “%@”";
 "memory.disable.label" = "Disable memory “%@”";
-"memory.category.auto" = "Auto";
+"memory.category.auto" = "Classify with model";
+"memory.scope" = "Applies to";
+"memory.scope.space" = "Entire space";
+"memory.scope.missing" = "Original workspace (unavailable)";
+"memory.always.include" = "Use this preference across topics within its scope";
+"memory.classify.recipient" = "Saving will send this note to %@ for classification.";
+"memory.classify.unavailable" = "Choose a category to save locally, or enable a model for classification.";
+"memory.source.stated" = "User statement used for extraction";
+"memory.source.inferred" = "Excerpt used for model inference";
+"memory.undo.count" = "Disabled %d newly added memories.";
+"memory.edit.stale" = "This memory changed or was removed. Reopen it to review the latest version.";
 "memory.category.preference" = "Preference";
 "memory.category.fact" = "Fact";
 "memory.category.decision" = "Decision";
@@ -637,7 +647,7 @@
 "settings.privacy.spaces" = "Life and Work spaces are physically isolated databases.";
 "settings.memory" = "Memory";
 "settings.memory.auto" = "Automatic Memory";
-"settings.memory.auto.desc" = "Distills long-term memories in the background every few conversation rounds. Extracted memories are saved silently and can be deleted on the Memory page.";
+"settings.memory.auto.desc" = "After five eligible exchanges, the app sends conversation excerpts and up to three related memory excerpts per request to the model. You can undo new memories in the chat.";
 "settings.backup" = "Backup & Restore";
 "settings.backup.desc" = "Protects this space’s conversations, memories, skills and versions, knowledge, agents, mail, schedules, connection definitions, mini-app data, user databases and managed project files. Preview coverage before restoring; content is verified and an undo point retained afterward.";
 "settings.backup.export" = "Export Backup…";

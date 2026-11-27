@@ -2,18 +2,11 @@ import Foundation
 
 /// Per-run selection from already space-scoped data. No global cache or filesystem access.
 enum PromptContextSelection {
-    static func memories(_ items: [MemoryItem], query: String, tokenBudget: Int = 1_200) -> [MemoryItem] {
-        let words = KnowledgeRanker.tokenize(String(query.prefix(8_000)))
-        let ranked = items.filter(\.isEnabled).map { item in
-            (item, score(item.content, words: words) + (item.category == .preference ? 2 : 0))
-        }.filter { $0.1 > 0 }.sorted {
-            if $0.1 != $1.1 { return $0.1 > $1.1 }
-            if $0.0.createdAt != $1.0.createdAt { return $0.0.createdAt > $1.0.createdAt }
-            return $0.0.id.uuidString < $1.0.id.uuidString
-        }
+    static func budgetedMemories(_ ranked: [MemoryItem], tokenBudget: Int = 1_200) -> [MemoryItem] {
         var remaining = max(0, tokenBudget)
         var result: [MemoryItem] = []
-        for (var item, _) in ranked.prefix(8) {
+        for var item in ranked {
+            if result.count == 8 { break }
             if item.content.count > 900 {
                 item.content = String(item.content.prefix(600))
                     + "\n[Memory excerpt omitted; use memory_search to retrieve the stored entry.]\n"

@@ -23,26 +23,6 @@ enum AppHostToolFactory {
     }
 }
 
-/// 由 ChatViewModel 的 MainActor 独占：在任何 await 前占用槽位，失败释放且不推进轮数。
-struct MemoryDistillProgress {
-    private var completedRounds: [UUID: Int] = [:]
-    private var inFlight: Set<UUID> = []
-
-    func isActive(_ id: UUID) -> Bool { inFlight.contains(id) }
-
-    mutating func begin(sessionID: UUID, rounds: Int, interval: Int) -> Bool {
-        guard !inFlight.contains(sessionID),
-              rounds - (completedRounds[sessionID] ?? 0) >= interval else { return false }
-        inFlight.insert(sessionID)
-        return true
-    }
-
-    mutating func finish(sessionID: UUID, successfulRounds: Int?) {
-        inFlight.remove(sessionID)
-        if let successfulRounds { completedRounds[sessionID] = successfulRounds }
-    }
-}
-
 // MARK: - Pending Confirmation
 
 /// 等待用户确认的危险工具调用（UI 状态）
@@ -520,8 +500,10 @@ final class ChatViewModel: MenuBarActivitySource {
     static let distillRoundThreshold = 10
     /// 自动提炼长期记忆的轮次间隔：每跨过该间隔（第 5/10/15…轮）后台提炼一次
     static let memoryDistillRoundInterval = 5
-    /// 成功进度与在途槽位：防止并发重复请求，失败后下次完成问答可重试。
-    private var memoryDistillProgress = MemoryDistillProgress()
+    /// 在途请求按会话互斥，已处理的消息位置持久保存在该空间数据库。
+    private var extractingMemorySessions: Set<UUID> = []
+    var undoingMemorySessions: Set<UUID> = []
+    var undoneMemoryCounts: [UUID: Int] = [:]
     var recentlyAddedMemories: [UUID: [MemoryItem]] = [:]
     var isSummarizing = false
 
@@ -1016,7 +998,7 @@ final class ChatViewModel: MenuBarActivitySource {
     /// nil 会话 = 切换的是新建会话的预选模式，不涉及运行态，永远可切
     func canSwitchMode(forSession sessionId: UUID?) -> Bool {
         guard let sessionId else { return true }
-        if handedOffSessionIds.contains(sessionId) || titleRequests.contains(sessionId) || memoryDistillProgress.isActive(sessionId) || isSummarizing { return false }
+        if handedOffSessionIds.contains(sessionId) || titleRequests.contains(sessionId) || extractingMemorySessions.contains(sessionId) || isSummarizing { return false }
         if isSavingPermission(forSession: sessionId) { return false }
         if savingCounts[sessionId, default: 0] > 0 { return false }
         if let run = runState.current(for: sessionId), run.isStreaming { return false }
@@ -2930,14 +2912,16 @@ final class ChatViewModel: MenuBarActivitySource {
     }
 
     func undoAutomaticMemories(sessionID: UUID) async {
-        guard let service = hub.makeMemoryService(for: space) else { return }
-        for item in recentlyAddedMemories[sessionID] ?? [] {
-            do {
-                guard let current = try await service.fetch(id: item.id), current == item else { continue }
-                try await service.setEnabled(id: item.id, enabled: false)
-            } catch { errorMessage = L.string("error.database"); return }
-        }
-        recentlyAddedMemories[sessionID] = nil
+        guard let items = recentlyAddedMemories[sessionID], let service = hub.makeMemoryService(for: space),
+              undoingMemorySessions.insert(sessionID).inserted else { return }
+        defer { undoingMemorySessions.remove(sessionID) }
+        do {
+            let changed = try await service.undoExtraction(items)
+            if recentlyAddedMemories[sessionID]?.map(\.id) == items.map(\.id) {
+                recentlyAddedMemories[sessionID] = nil
+                undoneMemoryCounts[sessionID] = changed
+            }
+        } catch { errorMessage = L.string("error.database") }
     }
 
     func summarizeActiveSession() async {
@@ -4157,7 +4141,9 @@ final class ChatViewModel: MenuBarActivitySource {
             // 首轮完成 → 后台生成会话标题（失败静默回退截断标题）
             Task { [weak self] in await self?.autoTitleIfNeeded(containing: messageId) }
             // 每跨过若干轮 → 后台自动提炼长期记忆（失败记录脱敏日志）
-            Task { [weak self] in await self?.autoDistillMemoriesIfNeeded(containing: messageId) }
+            if saved && !completion.isIncomplete {
+                Task { [weak self] in await self?.autoDistillMemoriesIfNeeded(containing: messageId) }
+            }
 
         case .needsConfirmation(let toolName, let argumentsDisplay, let changePreview, let requirement):
             // 旧运行（已被停止/被新发送替换）的挂起不进入界面，避免拦下新运行
@@ -5202,64 +5188,108 @@ final class ChatViewModel: MenuBarActivitySource {
 
     /// 每跨过 `memoryDistillRoundInterval` 轮问答，用一次小请求提炼长期记忆并静默落库。
     /// 后处理失败不影响对话，保留脱敏日志与下次成功问答时的重试机会。
-    private func autoDistillMemoriesIfNeeded(containing messageId: UUID) async {
-        guard DispatcherSettings.autoMemoryEnabled,
-              let loc = locate(messageId),
-              loc.sessionIndex < sessions.count else { return }
+    private func autoDistillMemoriesIfNeeded(containing messageID: UUID) async {
+        guard DispatcherSettings.autoMemoryEnabled, let loc = locate(messageID) else { return }
         let session = sessions[loc.sessionIndex]
-        guard session.dataPolicy != .localOnly else { return }
-        // 只读会话不产生用户可见写：自动记忆属于记忆页可见数据，暂停到用户切回可写模式
-        guard session.permissionMode != .readOnly else {
-            HubLogger.shared.info("Memory extraction skipped: read-only session")
-            return
-        }
-        let eligible = Self.memoryEligibleMessages(in: session.messages)
-        guard eligible.contains(where: { $0.id == messageId }) else { return }
-        let rounds = Self.completedConversationRoundCount(in: eligible)
-        guard memoryDistillProgress.begin(sessionID: session.id, rounds: rounds, interval: Self.memoryDistillRoundInterval) else { return }
-        var successfulRounds: Int?
-        defer { memoryDistillProgress.finish(sessionID: session.id, successfulRounds: successfulRounds) }
-        HubLogger.shared.info("Memory extraction started: space=\(space.rawValue), rounds=\(rounds)")
-
+        guard session.dataPolicy != .localOnly, session.permissionMode != .readOnly,
+              let service = hub.makeMemoryService(for: space),
+              extractingMemorySessions.insert(session.id).inserted else { return }
+        defer { extractingMemorySessions.remove(session.id) }
         do {
-            guard let provider = try await hub.makeActiveProvider(for: space, source: "memory-extraction", sessionID: session.id, dataPolicy: session.dataPolicy),
-                  let memoryService = hub.makeMemoryService(for: space) else {
-                HubLogger.shared.warning("Memory extraction skipped: provider or database unavailable")
-                return
+            let cursor = try await service.extractionCursor(sessionID: session.id)
+            var messages = session.messages
+            if let cursor, session.messageOffset > 0, !messages.contains(where: { $0.id == cursor }) {
+                guard let sessionService else { return }
+                messages = try await sessionService.getMessages(id: session.id)
             }
-            let transcript = Self.memoryTranscript(for: eligible)
-            guard !transcript.isEmpty else {
-                HubLogger.shared.warning("Memory extraction skipped: empty transcript")
-                return
+            guard let batch = Self.memoryBatch(in: messages, through: messageID, after: cursor),
+                  let provider = try await hub.makeActiveProvider(for: space, source: "memory-extraction", sessionID: session.id, dataPolicy: session.dataPolicy) else { return }
+            let distiller = MemoryDistiller(provider: provider, memoryService: service)
+            var after = cursor
+            var items: [MemoryItem] = []
+            defer {
+                if !items.isEmpty {
+                    undoneMemoryCounts[session.id] = nil
+                    recentlyAddedMemories[session.id] = items
+                }
             }
-            let distiller = MemoryDistiller(provider: provider, memoryService: memoryService)
-            let items = try await distiller.distill(transcript: transcript, sourceSessionID: session.id, sourceMessageID: messageId)
-            // 有效空列表也属于成功：模型明确判断无需新增，仍遵守提炼间隔。
-            successfulRounds = rounds
-            if !items.isEmpty { recentlyAddedMemories[session.id] = items }
+            for group in Self.memoryWorkspaceGroups(batch, fallback: resolvedWorkspaceId(session.workspaceId)) {
+                guard let last = group.messages.last else { continue }
+                let checkpoint = MemoryExtractionCheckpoint(sessionID: session.id, after: after, through: last.id)
+                items += try await distiller.distill(messages: group.messages, checkpoint: checkpoint, workspaceID: group.workspaceID) { [weak self] in
+                    await self?.allowsMemoryExtraction(sessionID: session.id, sources: group.messages) == true
+                }
+                after = last.id
+            }
             HubLogger.shared.info("Memory extraction completed: saved=\(items.count)")
         } catch is CancellationError {
-            HubLogger.shared.debug("Memory extraction cancelled; progress retained")
+            HubLogger.shared.debug("Memory extraction cancelled")
         } catch {
             HubLogger.shared.warning("Memory extraction unsuccessful; retry eligible on next completed round")
         }
     }
 
-    /// 提炼输入：取最近若干条问答并逐条截断，控制提炼请求成本
-    static func memoryTranscript(for messages: [ChatMessage]) -> String {
-        memoryEligibleMessages(in: messages).suffix(12).compactMap { message -> String? in
-            let text = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { return nil }
+    private func allowsMemoryExtraction(sessionID: UUID, sources: [ChatMessage]) async -> Bool {
+        func allowedSession() -> ChatSession? {
+            guard DispatcherSettings.autoMemoryEnabled else { return nil }
+            return sessions.first { $0.id == sessionID && $0.dataPolicy != .localOnly && $0.permissionMode != .readOnly }
+        }
+        guard let session = allowedSession() else { return false }
+        var messages = session.messages
+        if session.messageOffset > 0, let first = sources.first, !messages.contains(where: { $0.id == first.id }) {
+            guard let stored = try? await sessionService?.getMessages(id: sessionID), allowedSession() != nil else { return false }
+            messages = stored
+        }
+        let eligible = Self.memoryEligibleMessages(in: messages)
+        return sources.allSatisfy { source in
+            eligible.contains { $0.id == source.id && $0.role == source.role && $0.content == source.content }
+        }
+    }
+
+    /// Start a new or previously untracked history at the latest eligible window. Once a
+    /// checkpoint exists, consume the oldest complete window after it, in source order.
+    static func memoryBatch(in messages: [ChatMessage], through endID: UUID, after cursor: UUID?,
+                            interval: Int = memoryDistillRoundInterval) -> [ChatMessage]? {
+        guard interval > 0, let end = messages.firstIndex(where: { $0.id == endID }) else { return nil }
+        if let cursor, let previous = messages.firstIndex(where: { $0.id == cursor }), previous >= end { return nil }
+        let prefix = messages[...end]
+        let boundary = cursor.flatMap { id in prefix.firstIndex { $0.id == id } }
+        let eligible = memoryEligibleMessages(in: Array(prefix))
+        guard eligible.last?.id == endID else { return nil }
+        let processedIDs = boundary.map { Set(prefix[...$0].map(\.id)) } ?? []
+        var pairs: [[ChatMessage]] = []
+        var user: ChatMessage?
+        for message in eligible where !processedIDs.contains(message.id) {
             switch message.role {
-            case .user:
-                return "User: \(text.prefix(500))"
+            case .user: user = message
+            case .error: user = nil
             case .assistant:
-                return "Assistant: \(text.prefix(500))"
-            case .error:
-                return nil
+                if let previous = user, message.runStatus == nil || message.runStatus == .succeeded,
+                   !previous.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   !message.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    pairs.append([previous, message])
+                }
+                user = nil
             }
         }
-        .joined(separator: "\n\n")
+        guard pairs.count >= interval else { return nil }
+        let window = boundary == nil ? pairs.suffix(interval) : pairs.prefix(interval)
+        return window.flatMap { $0 }
+    }
+
+    /// A conversation can move between projects. Each pair belongs to the workspace recorded
+    /// by its own run, including when a delayed extraction catches up with an older window.
+    static func memoryWorkspaceGroups(_ pairs: [ChatMessage], fallback: UUID?) -> [(workspaceID: UUID?, messages: [ChatMessage])] {
+        var groups: [(workspaceID: UUID?, messages: [ChatMessage])] = []
+        for index in pairs.indices where pairs[index].role == .assistant && index > 0 {
+            let response = pairs[index]
+            let workspace = response.contextReport?.resourceContext?.workspaceID ?? fallback
+            if groups.isEmpty || groups[groups.count - 1].workspaceID != workspace {
+                groups.append((workspace, []))
+            }
+            groups[groups.count - 1].messages.append(contentsOf: [pairs[index - 1], response])
+        }
+        return groups
     }
 
     static func memoryEligibleMessages(in messages: [ChatMessage]) -> [ChatMessage] {
@@ -7713,7 +7743,10 @@ public struct ChatView: View {
                     Text(L.format("product.memory.added", items.count)).font(.caption)
                     Button(L.string("product.memory.review")) { ProductRoute.open(space: viewModel.space, page: "memory") }
                     Button(L.string("product.memory.undo")) { Task { await viewModel.undoAutomaticMemories(sessionID: sessionID) } }
+                        .disabled(viewModel.undoingMemorySessions.contains(sessionID))
                 }.controlSize(.small)
+            } else if let sessionID = viewModel.activeSessionId, let count = viewModel.undoneMemoryCounts[sessionID] {
+                Text(L.format("memory.undo.count", count)).font(.caption)
             }
             // 待发送队列卡片（批量对话：运行中预输入，回复完成后依次发出）
             if !viewModel.activeQueue.isEmpty || viewModel.activeImmediateSend != nil {

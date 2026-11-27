@@ -28,6 +28,15 @@ public enum MemoryCategory: String, Codable, CaseIterable, Sendable {
 
 // MARK: - Memory Item
 
+public enum MemorySourceBasis: String, Codable, Sendable {
+    case stated, inferred
+}
+
+public struct MemorySupersession: Codable, Equatable, Sendable {
+    public let id: UUID
+    public let revision: Int
+}
+
 /// 长期记忆条目：注入调度上下文，并可通过调度工具检索/保存
 public struct MemoryItem: Codable, Identifiable, Equatable, Sendable {
     public let id: UUID
@@ -37,6 +46,18 @@ public struct MemoryItem: Codable, Identifiable, Equatable, Sendable {
     public var createdAt: Date
     public var sourceSessionID: UUID?
     public var sourceMessageID: UUID?
+    public var sourceBasis: MemorySourceBasis?
+    public var sourceQuote: String?
+    public var workspaceID: UUID?
+    public var alwaysInclude = false
+    public var revision = 0
+    public var supersedes: MemorySupersession?
+
+    var promptDescription: String {
+        let scope = workspaceID == nil ? "" : "[Current workspace] "
+        let basis = sourceBasis == .inferred ? "[Model inference] " : ""
+        return scope + basis + content
+    }
 
     public init(
         id: UUID = UUID(),
@@ -63,5 +84,34 @@ public struct MemoryItem: Codable, Identifiable, Equatable, Sendable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         sourceSessionID = try container.decodeIfPresent(UUID.self, forKey: .sourceSessionID)
         sourceMessageID = try container.decodeIfPresent(UUID.self, forKey: .sourceMessageID)
+        sourceBasis = try container.decodeIfPresent(MemorySourceBasis.self, forKey: .sourceBasis)
+        sourceQuote = try container.decodeIfPresent(String.self, forKey: .sourceQuote)
+        workspaceID = try container.decodeIfPresent(UUID.self, forKey: .workspaceID)
+        alwaysInclude = try container.decodeIfPresent(Bool.self, forKey: .alwaysInclude) ?? false
+        revision = try container.decodeIfPresent(Int.self, forKey: .revision) ?? 0
+        supersedes = try container.decodeIfPresent(MemorySupersession.self, forKey: .supersedes)
+    }
+
+    // Keep historical recovery-point fingerprints stable for records with no new metadata.
+    private enum CodingKeys: String, CodingKey {
+        case id, content, category, isEnabled, createdAt, sourceSessionID, sourceMessageID
+        case sourceBasis, sourceQuote, workspaceID, alwaysInclude, revision, supersedes
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(content, forKey: .content)
+        try c.encode(category, forKey: .category)
+        try c.encode(isEnabled, forKey: .isEnabled)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encodeIfPresent(sourceSessionID, forKey: .sourceSessionID)
+        try c.encodeIfPresent(sourceMessageID, forKey: .sourceMessageID)
+        try c.encodeIfPresent(sourceBasis, forKey: .sourceBasis)
+        try c.encodeIfPresent(sourceQuote, forKey: .sourceQuote)
+        try c.encodeIfPresent(workspaceID, forKey: .workspaceID)
+        if alwaysInclude { try c.encode(true, forKey: .alwaysInclude) }
+        if revision != 0 { try c.encode(revision, forKey: .revision) }
+        try c.encodeIfPresent(supersedes, forKey: .supersedes)
     }
 }

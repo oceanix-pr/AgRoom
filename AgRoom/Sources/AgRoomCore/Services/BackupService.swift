@@ -597,7 +597,7 @@ public final class BackupService: @unchecked Sendable {
         let decoder = Self.decoder()
         var sessions = try decodeSessions(staging: staging, decoder: decoder).map(Self.portableSession)
         for index in sessions.indices { sessions[index].autoReviewEnabled = false }
-        let memories = try decodeMemories(staging: staging, decoder: decoder)
+        var memories = try decodeMemories(staging: staging, decoder: decoder)
         let attachmentEntries = try decodeAttachments(staging: staging, decoder: decoder)
         let workspaces = try decodeWorkspaces(staging: staging, decoder: decoder)
         let usageURL = staging.appendingPathComponent("usage.json")
@@ -692,6 +692,11 @@ public final class BackupService: @unchecked Sendable {
             taskDatabase = try taskDatabase.replacingBlobReferences(mapping)
         }
         record.database = try await recoveryDatabase.plan(taskDatabase, sourceSpace: plan.manifest.space, pathMappings: pathMappings, workspaceMappings: workspaceMappings)
+        for index in memories.indices {
+            if let id = memories[index].workspaceID, let mapped = workspaceMappings[id.uuidString].flatMap(UUID.init(uuidString:)) {
+                memories[index].workspaceID = mapped
+            }
+        }
         for index in record.sessions.indices {
             record.sessions[index].afterDigest = try recoveryDigest(sessions[index])
         }
@@ -722,7 +727,7 @@ public final class BackupService: @unchecked Sendable {
                 progress?(0.4 + 0.2 * Double(index + 1) / Double(max(sessions.count, 1)))
             }
             for (index, memory) in memories.enumerated() {
-                try await memoryService.save(memory)
+                try await memoryService.restore(memory)
                 progress?(0.6 + 0.1 * Double(index + 1) / Double(max(memories.count, 1)))
             }
 
@@ -1414,7 +1419,7 @@ public final class BackupService: @unchecked Sendable {
                     guard digest == expected else { throw MaintenanceError.busy }
                 }
                 if let before = entry.before {
-                    try await memoryService.save(before)
+                    try await memoryService.restore(before)
                 } else if let id = UUID(uuidString: entry.id) {
                     try await memoryService.delete(id: id)
                 }

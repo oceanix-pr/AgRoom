@@ -582,6 +582,7 @@
 		DBB4FFC5DE2AE107F9B3BFBC /* NativeAppDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02318FF711DDF7E865D6193F /* NativeAppDraftTests.swift */; };
 		DC1068CB43C133FA8FC781E6 /* NoteCaptureReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1854FDC6303D6C759146F966 /* NoteCaptureReport.swift */; };
 		DC19EAF84CD20F3F8C63993E /* ChatScrollState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7019F22F5B4157CFC9506338 /* ChatScrollState.swift */; };
+		DCF299DB6C9E8B042746E6BD /* MemoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43CE43B5C2C09B82612F2687 /* MemoryService.swift */; };
 		DD537FBE4095DAFB6BDC1203 /* NoteSubtitleExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9043339B41EE5ABD35819979 /* NoteSubtitleExporter.swift */; };
 		DE41B6861EF71C1A11CDE188 /* MailServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385D3404C80EE82CA1A73A9F /* MailServiceTests.swift */; };
 		DE82CE9D5AF7D3AA73D226EF /* ProductTaskRunTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0776FEB4484A8EEA32384D05 /* ProductTaskRunTests.swift */; };
@@ -1011,6 +1012,7 @@
 		43395EA1BCAD4D0E663FCA42 /* ModelParameters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParameters.swift; sourceTree = "<group>"; };
 		438E0959CC2789C8689F6831 /* MailArchiveBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailArchiveBundle.swift; sourceTree = "<group>"; };
 		43B02FFBA8D2A2AF5847283D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		43CE43B5C2C09B82612F2687 /* MemoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryService.swift; sourceTree = "<group>"; };
 		4480BBFF4FAF6011A2326BDB /* MarkdownWebRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownWebRenderer.swift; sourceTree = "<group>"; };
 		4483CE12BE2DEB1DF1C95538 /* RepositorySymbolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositorySymbolTests.swift; sourceTree = "<group>"; };
 		45CB3D9DCFB0D28E4DE26747 /* MenuBarRobot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarRobot.swift; sourceTree = "<group>"; };
@@ -2200,6 +2202,7 @@
 				36BD5DB8DC85340EF15858CD /* KnowledgeRetrievalService.swift */,
 				C153C609F553CB8989E37DE3 /* KnowledgeService.swift */,
 				090A17844D94DC5C4EC440B3 /* MemoryDistiller.swift */,
+				43CE43B5C2C09B82612F2687 /* MemoryService.swift */,
 				3DD07C0A74742CACBA3FED64 /* ModelParameterService.swift */,
 				D280361C987EFBFBF8013EA6 /* ModelPricingService.swift */,
 				ACEEEDB8EC5CDF589FEF0BFD /* MySQLConnector.swift */,
@@ -3131,6 +3134,7 @@
 				9C5CCDA73984A634D01FE1F4 /* MediaTools.swift in Sources */,
 				8AB031D8D2E3F233D9CA1CD0 /* MemoryDistiller.swift in Sources */,
 				453335474D42B3ED9B99D98E /* MemoryItem.swift in Sources */,
+				DCF299DB6C9E8B042746E6BD /* MemoryService.swift in Sources */,
 				A18D1C3BD00B76CAC9FF3A5E /* ModelAutoReviewReviewer.swift in Sources */,
 				A28B8975130E057D718ABA9D /* ModelParameterService.swift in Sources */,
 				1CD6A3B51B9E289873E2D2AE /* ModelParameters.swift in Sources */,

@@ -458,7 +458,17 @@
 "memory.disable" = "停用";
 "memory.enable.label" = "启用记忆「%@」";
 "memory.disable.label" = "停用记忆「%@」";
-"memory.category.auto" = "自动判断";
+"memory.category.auto" = "用模型分类";
+"memory.scope" = "适用范围";
+"memory.scope.space" = "整个空间";
+"memory.scope.missing" = "原工作区（当前不可用）";
+"memory.always.include" = "在此范围内的不同话题中都使用这条偏好";
+"memory.classify.recipient" = "保存时会将这条笔记发送给 %@ 进行分类。";
+"memory.classify.unavailable" = "选择具体类别即可在本机保存，也可启用模型进行分类。";
+"memory.source.stated" = "提炼依据 · 用户明确表达";
+"memory.source.inferred" = "提炼依据 · 模型推断";
+"memory.undo.count" = "已停用本批次新增记忆 %d 条。";
+"memory.edit.stale" = "这条记忆已更改或删除，请重新打开查看最新内容。";
 "memory.category.preference" = "偏好";
 "memory.category.fact" = "事实";
 "memory.category.decision" = "决策";
@@ -637,7 +647,7 @@
 "settings.privacy.spaces" = "生活空间与工作空间为物理隔离的独立数据库。";
 "settings.memory" = "记忆";
 "settings.memory.auto" = "自动生成记忆";
-"settings.memory.auto.desc" = "每进行若干轮对话后，在后台自动提炼长期记忆。提炼结果会静默保存，可在记忆页随时删除。";
+"settings.memory.auto.desc" = "每完成五轮符合条件的问答，应用会将对话片段和最多三条相关记忆摘录发给模型。新增记忆可在聊天中撤销。";
 "settings.backup" = "备份与恢复";
 "settings.backup.desc" = "按清单保护当前空间的对话、记忆、技能及版本、知识、智体、邮箱、定时任务、连接配置、小应用数据、用户数据库和受管项目文件。恢复前可预览覆盖范围，恢复后核对并保留回退点。";
 "settings.backup.export" = "导出备份…";

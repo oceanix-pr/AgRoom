@@ -1,3 +1,4 @@
+import GRDB
 import Foundation
 import Testing
 @testable import AgRoomCore
@@ -58,12 +59,23 @@ struct PromptCachingTests {
     }
 
     @Test("Relevant memory and preferred skills fit independent budgets and omit disabled entries")
-    func boundedSelection() {
+    func boundedSelection() async throws {
         let relevant = MemoryItem(content: "Swift 严格并发项目使用 actor 管理状态", category: .decision)
-        let preference = MemoryItem(content: "优先给出中文说明", category: .preference)
+        var preference = MemoryItem(content: "优先给出中文说明", category: .preference)
+        preference.alwaysInclude = true
         let unrelated = MemoryItem(content: "holiday " + String(repeating: "x", count: 50_000), category: .fact)
         let disabled = MemoryItem(content: "Swift 并发 hidden", isEnabled: false)
-        let selected = PromptContextSelection.memories([unrelated, disabled, relevant, preference], query: "Swift 并发问题")
+        let queue = try DatabaseQueue()
+        try DatabaseBootstrap.prepareSpace(queue)
+        let store = MemoryService(databaseQueue: queue)
+        let diet = MemoryItem(content: "我喜欢吃辣", category: .preference)
+        let report = MemoryItem(content: "项目周报统一导出为 PDF", category: .decision)
+        for item in [unrelated, disabled, relevant, preference, diet, report] { try await store.save(item) }
+        let selected = PromptContextSelection.budgetedMemories(try await store.search("Swift 并发问题", includePinned: true))
+        let chinese = try await store.search("周报该用什么格式")
+        #expect(chinese.map(\.id) == [report.id])
+        let tool = try await MemorySearchTool(service: store).execute(argumentsJSON: #"{"query":"周报该用什么格式"}"#)
+        #expect(tool.contains(report.content) && !tool.contains(diet.content))
         #expect(Set(selected.map(\.id)) == [relevant.id, preference.id])
         #expect(selected.reduce(0) { $0 + TokenEstimator.estimate($1.content) + 12 } <= 1_200)
         var skills = (0..<200).map { Skill(name: "fixture-\($0)", description: String(repeating: "description ", count: 100)) }

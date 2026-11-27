@@ -209,12 +209,12 @@ struct WorkspaceProjectTests {
         session.messages = [.init(role: .user, content: "PRIVATE USER", memoryExcluded: true), original,
             .init(role: .user, content: "PUBLIC USER"), .init(role: .assistant, content: "PUBLIC ANSWER", runStatus: .succeeded, taskRun: .init())]
         try await service.save(session)
-        #expect(ChatViewModel.memoryTranscript(for: session.messages) == "User: PUBLIC USER\n\nAssistant: PUBLIC ANSWER")
+        #expect(ChatViewModel.memoryEligibleMessages(in: session.messages).map(\.content) == ["PUBLIC USER", "PUBLIC ANSWER"])
         session.messages[1].variations = [AnswerVariation(question: "PRIVATE USER", message: original), AnswerVariation(question: "PRIVATE USER", content: "RETRY WITHOUT FLAG")]
         session.messages[1].activeVariationIndex = 1
         session.messages[1].content = "RETRY WITHOUT FLAG"; session.messages[1].contextReport = nil; session.messages[1].taskRun = .init()
         session.messages[0].memoryExcluded = nil // Variation snapshot independently protects older exports.
-        #expect(!ChatViewModel.memoryTranscript(for: session.messages).contains("PRIVATE"))
+        #expect(!ChatViewModel.memoryEligibleMessages(in: session.messages).map(\.content).joined().contains("PRIVATE"))
         try await service.save(session)
         let retained = try #require(try await ProductTaskRunStore(databaseQueue: q).run(id: privateID))
         #expect(retained.resourceContext == resource)
@@ -310,8 +310,8 @@ struct WorkspaceProjectTests {
         #expect(probe.requests.last?.settings.resourceContext?.excludesMemory == false)
         let persisted = try #require(try await SessionService(databaseQueue: q).fetch(id: owner))
         #expect(persisted.messages.filter { $0.role == .user && $0.memoryExcluded == true }.count == 3)
-        #expect(ChatViewModel.memoryTranscript(for: persisted.messages).contains("LATER ORDINARY"))
-        #expect(!ChatViewModel.memoryTranscript(for: persisted.messages).contains("PRIVATE"))
+        #expect(ChatViewModel.memoryEligibleMessages(in: persisted.messages).map(\.content).joined().contains("LATER ORDINARY"))
+        #expect(!ChatViewModel.memoryEligibleMessages(in: persisted.messages).map(\.content).joined().contains("PRIVATE"))
     }
 
     @Test("Actual delegated engines and team workers cannot retrieve excluded memory or knowledge from an unselected base")
