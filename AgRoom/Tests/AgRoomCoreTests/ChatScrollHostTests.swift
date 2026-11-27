@@ -19,14 +19,14 @@ struct ChatScrollHostTests {
         try await waitForBottomMessage(host: hosting, window: window)
 
         // 追加一批长短不一的消息：内容高度变化后仍应回到锚点附近
-        model.items.append(contentsOf: Array(4...12))
+        model.items.append(contentsOf: (4...12).map(ChatScrollProbeModel.Item.init(number:)))
         try await waitForBottomMessage(host: hosting, window: window)
     }
 
     @Test("异步正文增高、高度收缩与视口变化后保持底部")
     func asyncLayoutChangesStayAtBottom() async throws {
         let model = ChatScrollProbeModel()
-        model.items = Array(1...14)
+        model.items = (1...14).map(ChatScrollProbeModel.Item.init(number:))
         let hosting = NSHostingView(rootView: ChatScrollProbeView(model: model))
         let window = makeWindow(hosting: hosting)
         defer { window.close() }
@@ -68,7 +68,7 @@ struct ChatScrollHostTests {
     @Test("Scrolling up during a Markdown stream preserves the reading position through final layout")
     func readingEarlierMessageDuringStream() async throws {
         let model = ChatScrollProbeModel()
-        model.items = Array(1...18)
+        model.items = (1...18).map(ChatScrollProbeModel.Item.init(number:))
         // A trailing result card keeps the reader outside the follow threshold
         // even while the final Markdown view replaces its streaming placeholder.
         model.detailHeight = 600
@@ -82,13 +82,15 @@ struct ChatScrollHostTests {
         }
         // Keep the previous message and the start of the streaming reply on screen
         // together so the lazy stack is actively rendering the reply during the edit.
-        model.readerTarget = 17
+        model.readerTarget = try #require(model.items.dropLast().last?.id)
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             guard let reader = model.snapshot.readerFrame, let reply = model.snapshot.lastItemFrame,
                   let viewport = model.snapshot.viewportFrame else { return false }
-            return model.snapshot.paused && reader.intersects(viewport) && reply.intersects(viewport)
+            return model.snapshot.paused && abs(reader.minY - viewport.minY) <= 2 && reply.intersects(viewport)
+                && abs(reply.minY - reader.maxY - 12) <= 2
                 && (model.distanceFromBottom ?? 0) > ChatScrollState.pauseDistance
         }
+        model.scrollState.endUserInteraction()
         let position = try #require(model.snapshot.readerFrame?.minY)
         model.markdown += "\n```\n\n![fixture](late.png)\n\n[late]: https://example.invalid/source"
         model.streaming = false
@@ -101,8 +103,8 @@ struct ChatScrollHostTests {
             }
         }
         try await waitUntil(host: hosting, window: window, timeout: 5) {
-            guard let reader = model.snapshot.readerFrame else { return false }
-            return abs(reader.minY - position) <= 2 && model.snapshot.paused
+            guard let reader = model.snapshot.readerFrame, let reply = model.snapshot.lastItemFrame else { return false }
+            return abs(reader.minY - position) <= 2 && abs(reply.minY - reader.maxY - 12) <= 2 && model.snapshot.paused
                 && (model.distanceFromBottom ?? 0) > ChatScrollState.pauseDistance
         }
     }
@@ -131,7 +133,7 @@ struct ChatScrollHostTests {
         let model = host.rootView.model
         let snapshot = model.snapshot
         try await waitUntil(host: host, window: window, timeout: 5, sourceLocation: sourceLocation) {
-            guard snapshot.lastItemID == model.items.last,
+            guard snapshot.lastItemID == model.items.last?.id,
                   let last = snapshot.lastItemFrame, let viewport = snapshot.viewportFrame,
                   let contentHeight = snapshot.contentHeight, let viewportHeight = snapshot.viewportHeight,
                   let distance = snapshot.rawDistanceFromBottom else { return false }
@@ -165,11 +167,16 @@ struct ChatScrollHostTests {
 @Observable
 final class ChatScrollProbeModel {
     let sessionID = UUID()
-    var items: [Int] = [1, 2, 3]
+    let scrollState = ChatScrollState()
+    struct Item: Identifiable {
+        let id = UUID()
+        let number: Int
+    }
+    var items = (1...3).map(Item.init(number:))
     /// 最后一条消息在首轮排版后异步长出的正文高度（模拟 Markdown / 图片解析完成）
     var detailHeight: CGFloat = 0
     var distanceFromBottom: CGFloat?
-    var readerTarget: Int?
+    var readerTarget: UUID?
     var markdown = ""
     var streaming = true
     let renderer = MarkdownRenderModel(resourceLoader: { _, _, _ in
@@ -183,7 +190,7 @@ final class ChatScrollProbeModel {
 final class ChatScrollProbeSnapshot {
     var paused = false
     var readerFrame: CGRect?
-    var lastItemID: Int?
+    var lastItemID: UUID?
     var lastItemFrame: CGRect?
     var viewportFrame: CGRect?
     var contentHeight: CGFloat?
@@ -193,21 +200,22 @@ final class ChatScrollProbeSnapshot {
 
 private struct ChatScrollProbeView: View {
     let model: ChatScrollProbeModel
-    @State private var scrollState = ChatScrollState()
-    @State private var scrollPosition = ScrollPosition(idType: Int.self)
+    private var scrollState: ChatScrollState { model.scrollState }
+    @State private var scrollPosition = ScrollPosition(idType: UUID.self)
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
-                    ForEach(model.items, id: \.self) { item in
+                    ForEach(model.items) { item in
+                        let id = item.id
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Message \(item) " + String(repeating: "content ", count: (item % 7) * 4 + 4))
+                            Text("Message \(item.number) " + String(repeating: "content ", count: (item.number % 7) * 4 + 4))
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                            if item == model.items.last, !model.markdown.isEmpty {
+                            if id == model.items.last?.id, !model.markdown.isEmpty {
                                 MarkdownView(text: model.markdown, streaming: model.streaming, documentID: "reply", model: model.renderer)
                             }
-                            if item == model.items.last, model.detailHeight > 0 {
+                            if id == model.items.last?.id, model.detailHeight > 0 {
                                 Text("Late markdown body")
                                     .frame(maxWidth: .infinity, minHeight: model.detailHeight, alignment: .topLeading)
                                     .background(Color.gray.opacity(0.08))
@@ -216,17 +224,25 @@ private struct ChatScrollProbeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(8)
                         .background(Color.gray.opacity(0.12))
-                        .id(item)
+                        .id(id)
                         .onGeometryChange(for: CGRect.self) { geometry in
                             geometry.frame(in: .global)
                         } action: { frame in
-                            if item == model.readerTarget { model.snapshot.readerFrame = frame }
-                            guard item == model.items.last else { return }
-                            model.snapshot.lastItemID = item
+                            scrollState.recordMessageFrame(frame, id: id)
+                            if scrollState.hasReadingAnchor { scheduleFlush(proxy) }
+                            if id == model.readerTarget { model.snapshot.readerFrame = frame }
+                            guard id == model.items.last?.id else { return }
+                            model.snapshot.lastItemID = id
                             model.snapshot.lastItemFrame = frame
+                        }
+                        .onDisappear {
+                            scrollState.forgetMessageFrame(id)
+                            if id == model.readerTarget { model.snapshot.readerFrame = nil }
+                            if id == model.items.last?.id { model.snapshot.lastItemFrame = nil }
                         }
                     }
                 }
+                .scrollTargetLayout()
                 .padding([.horizontal, .top])
                 .padding(.bottom, 24)
             }
@@ -241,7 +257,7 @@ private struct ChatScrollProbeView: View {
             .onAppear {
                 scrollState.bindSession(model.sessionID, reset: true)
                 scrollState.request(.layoutCorrection)
-                scheduleFlush()
+                scheduleFlush(proxy)
             }
             .onScrollGeometryChange(for: ChatScrollGeometry.self) { geometry in
                 ChatScrollGeometry(
@@ -257,9 +273,8 @@ private struct ChatScrollProbeView: View {
                 model.snapshot.rawDistanceFromBottom = newValue.rawDistanceFromBottom
                 let flush = scrollState.ingest(newValue)
                 model.snapshot.paused = !scrollState.isFollowingBottom
-                if model.snapshot.paused && scrollState.isUserInteracting { scrollState.endUserInteraction() }
                 guard flush else { return }
-                scheduleFlush()
+                scheduleFlush(proxy)
             }
             .onScrollPhaseChange { _, phase in
                 switch phase {
@@ -271,29 +286,32 @@ private struct ChatScrollProbeView: View {
                     scrollState.endUserInteraction()
                     scrollState.setAnimatingScroll(false)
                     scrollState.settle()
-                    scheduleFlush()
+                    scheduleFlush(proxy)
                 }
             }
             .onChange(of: model.readerTarget) { _, item in
                 guard let item else { return }
                 scrollState.beginUserInteraction()
-                scrollPosition = ScrollPosition(idType: Int.self)
-                proxy.scrollTo(item, anchor: .top)
+                scrollPosition.scrollTo(id: item, anchor: .top)
             }
             .onChange(of: model.items.count) { _, _ in
                 guard scrollState.isFollowingBottom else { return }
                 scrollState.request(.newMessage)
-                scheduleFlush()
+                scheduleFlush(proxy)
             }
         }
     }
 
-    private func scheduleFlush() {
+    private func scheduleFlush(_ proxy: ScrollViewProxy) {
         guard scrollState.beginFlush() else { return }
         let generation = scrollState.generation
         Task { @MainActor in
             scrollState.endFlush()
             guard scrollState.isCurrent(sessionID: model.sessionID, generation: generation) else { return }
+            if let target = scrollState.readingReflowTarget() {
+                proxy.scrollTo(target.id, anchor: UnitPoint(x: 0, y: target.anchor))
+                return
+            }
             guard let request = scrollState.takePendingRequest(),
                   scrollState.canExecute(request) else { return }
             if request.isAnimated {

@@ -25,6 +25,26 @@ struct ChatScrollStateTests {
         #expect(!state.hasReadingAnchor)
     }
 
+    @Test("重排移除正在阅读的短消息时，按原有屏幕位置找回该消息")
+    func restoreReadingRowAfterLazyEviction() throws {
+        let state = ChatScrollState(), id = UUID()
+        state.bindSession(UUID())
+        state.ingest(geometry(content: 3000, offset: 2500))
+        state.beginUserInteraction()
+        state.ingest(geometry(content: 3000, offset: 500))
+        state.recordMessageFrame(.init(x: 0, y: 60, width: 400, height: 100), id: id)
+        state.endUserInteraction()
+        #expect(state.readingReflowTarget() == nil)
+        state.forgetMessageFrame(id)
+        state.ingest(geometry(content: 3500, offset: 900))
+        let target = try #require(state.readingReflowTarget())
+        #expect(target.id == id)
+        #expect(abs(target.anchor - 60.0 / 400.0) < 0.001)
+        #expect(state.readingReflowTarget() == nil)
+        state.beginUserInteraction()
+        #expect(!state.hasReadingAnchor)
+    }
+
     private func geometry(
         content: CGFloat = 1000,
         viewport: CGFloat = 500,

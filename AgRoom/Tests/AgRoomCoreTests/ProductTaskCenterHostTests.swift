@@ -1710,7 +1710,10 @@ struct ProductTaskCenterHostTests {
         try await pressButton(L.string("knowledge.source.title"), in: window)
         _ = try await waitRendered(window, containing: L.string("knowledge.source.check"))
         try await pressButton(L.string("knowledge.source.check"), in: window)
-        _ = try await waitRendered(window, containing: L.string("knowledge.source.state.missing"))
+        let missingCaption = Self.normalized(L.string("knowledge.source.state.missing"))
+        try await wait(window) {
+            visibleLabels(in: window).contains { Self.normalized($0) == missingCaption }
+        }
         try await pressButton(L.string("knowledge.source.update"), in: window)
         try await wait(window) { window.attachedSheet != nil }
         let sheet = try #require(window.attachedSheet)

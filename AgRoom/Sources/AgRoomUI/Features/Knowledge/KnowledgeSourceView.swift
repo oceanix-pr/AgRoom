@@ -32,9 +32,14 @@ struct KnowledgeSourceMaintenanceView: View {
                             VStack(alignment: .leading, spacing: 5) {
                                 Text(URL(fileURLWithPath: source.path).lastPathComponent).font(.subheadline.bold()).help(source.path)
                                 if let status = statuses[source.id] {
-                                    Text(L.string("knowledge.source.state.\(status.state.rawValue)")).font(.caption).foregroundStyle(status.state == .current ? Color.secondary : .orange)
+                                    Text(L.string("knowledge.source.state.\(status.state.rawValue)"))
+                                        .font(.callout).foregroundStyle(status.state == .current ? Color.secondary : .orange)
+                                        .textSelection(.enabled)
                                     if status.edited { Text(L.string("knowledge.source.edited")).font(.caption).foregroundStyle(.orange) }
-                                } else if source.missing { Text(L.string("knowledge.source.state.missing")).font(.caption).foregroundStyle(.orange) }
+                                } else if source.missing {
+                                    Text(L.string("knowledge.source.state.missing"))
+                                        .font(.callout).foregroundStyle(.orange).textSelection(.enabled)
+                                }
                                 HStack {
                                     Button(L.string("knowledge.source.check")) { check(source.id) }.disabled(busy)
                                     Button(L.string("knowledge.source.update")) { onUpdate(source.id) }.disabled(busy)

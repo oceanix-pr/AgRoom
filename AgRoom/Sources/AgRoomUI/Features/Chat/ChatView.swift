@@ -6539,7 +6539,7 @@ public struct ChatView: View {
     }
 
     /// 会话头部：标题 + 累计 Token + 会话内搜索
-    private func sessionHeader(_ session: ChatSession, proxy: ScrollViewProxy) -> some View {
+    private func sessionHeader(_ session: ChatSession) -> some View {
         // 与输入栏同一口径（含运行中未落库的实时用量），避免同会话两处数字不一致
         let totals = viewModel.conversationTokenTotals(for: session)
         let hasTokens = totals.input > 0 || totals.output > 0
@@ -6612,7 +6612,7 @@ public struct ChatView: View {
                         .onChange(of: inSessionSearchText) { _, _ in
                             currentMatchIndex = 0
                             if let first = sessionSearchHits(in: session).first {
-                                jumpToSearchHit(first.id, proxy: proxy)
+                                jumpToSearchHit(first.id)
                             }
                         }
 
@@ -6624,13 +6624,13 @@ public struct ChatView: View {
                             .foregroundColor(.secondary)
                             .monospacedDigit()
 
-                        Button(action: { jumpMatch(-1, hits: hits, proxy: proxy) }) {
+                        Button(action: { jumpMatch(-1, hits: hits) }) {
                             Image(systemName: "chevron.up")
                         }
                         .buttonStyle(.plain)
                         .disabled(hits.isEmpty)
 
-                        Button(action: { jumpMatch(1, hits: hits, proxy: proxy) }) {
+                        Button(action: { jumpMatch(1, hits: hits) }) {
                             Image(systemName: "chevron.down")
                         }
                         .buttonStyle(.plain)
@@ -6656,10 +6656,10 @@ public struct ChatView: View {
     }
 
     /// 跳转到上/下一个搜索命中（循环滚动定位）
-    private func jumpMatch(_ direction: Int, hits: [ChatMessage], proxy: ScrollViewProxy) {
+    private func jumpMatch(_ direction: Int, hits: [ChatMessage]) {
         guard !hits.isEmpty else { return }
         currentMatchIndex = (currentMatchIndex + direction + hits.count) % hits.count
-        jumpToSearchHit(hits[currentMatchIndex].id, proxy: proxy)
+        jumpToSearchHit(hits[currentMatchIndex].id)
     }
 
     /// 与任务板共用的团队写审批卡。批准/拒绝后两边都从共享中心刷新。
@@ -6740,7 +6740,7 @@ public struct ChatView: View {
                     Divider()
                 }
                 if let session = activeSession {
-                    sessionHeader(session, proxy: proxy)
+                    sessionHeader(session)
                     Divider()
                     if let goal = viewModel.goalsBySession[session.id] {
                         GoalProgressCard(goal: goal,
@@ -7388,6 +7388,7 @@ public struct ChatView: View {
                     .onDisappear { scrollState.forgetMessageFrame(message.id) }
                 }
             }
+            .scrollTargetLayout()
             .padding([.horizontal, .top])
             .padding(.bottom, 24)
         }
@@ -7407,7 +7408,7 @@ public struct ChatView: View {
             await Task.yield()
             guard !Task.isCancelled, viewModel.sourceMessageFocus?.id == focus.id,
                   viewModel.activeSessionId == sessionId else { return }
-            jumpToSearchHit(focus.messageID, proxy: proxy)
+            jumpToSearchHit(focus.messageID)
         }
         // 默认锚点按角色拆分：只负责初始位置与短内容对齐；
         // 尺寸变化不再由默认锚点接管，后续跟随统一交给 `ChatScrollState` 的滚动请求。
@@ -7475,6 +7476,9 @@ public struct ChatView: View {
         }
         .onChange(of: session.messages.last?.content) { _, _ in
             // 流式正文增长：合并高频请求，无动画跟随
+            if !scrollState.isFollowingBottom, !scrollState.hasReadingAnchor {
+                scrollState.beginReadingReflow()
+            }
             guard scrollState.canExecute(.contentGrowth) else { return }
             scrollState.request(.contentGrowth)
             scheduleScrollFlush(proxy: proxy, sessionId: sessionId)
@@ -7549,10 +7553,9 @@ public struct ChatView: View {
     }
 
     /// 会话内搜索定位：暂停跟随，并作废在途的自动回底，避免下一段流式输出把用户拉走。
-    private func jumpToSearchHit(_ messageID: UUID, proxy: ScrollViewProxy) {
+    private func jumpToSearchHit(_ messageID: UUID) {
         scrollState.beginSearchJump()
-        scrollPosition = ScrollPosition(idType: UUID.self)
-        proxy.scrollTo(messageID, anchor: .center)
+        scrollPosition.scrollTo(id: messageID, anchor: .center)
     }
 
     /// 当前活跃会话是否正在运行引擎轮（其他会话后台运行时本会话输入栏不显示停止态，

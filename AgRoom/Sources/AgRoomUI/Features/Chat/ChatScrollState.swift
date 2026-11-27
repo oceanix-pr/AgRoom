@@ -104,6 +104,8 @@ final class ChatScrollState {
     private struct ReadingAnchor {
         let id: UUID
         let fraction: CGFloat
+        let viewportFraction: CGFloat
+        var height: CGFloat
         var appliedLayout: [CGFloat] = []
     }
     private var readingAnchor: ReadingAnchor?
@@ -129,20 +131,31 @@ final class ChatScrollState {
         guard let target = frames.min(by: {
             abs($0.value.midY - center) < abs($1.value.midY - center)
         }) else { return }
-        readingAnchor = ReadingAnchor(id: target.key, fraction: min(1, max(0, (center - target.value.minY) / target.value.height)))
+        let point = min(target.value.maxY, max(target.value.minY, center))
+        readingAnchor = ReadingAnchor(id: target.key, fraction: (point - target.value.minY) / target.value.height,
+                                      viewportFraction: point / viewport, height: target.value.height)
     }
 
     func readingReflowTarget() -> (id: UUID, anchor: CGFloat)? {
         guard !isFollowingBottom, !isUserInteracting, var target = readingAnchor,
-              let frame = messageFrames[target.id], let geometry = lastGeometry else { return nil }
-        let layout = [frame.height, geometry.viewportHeight, geometry.contentHeight].map { ($0 * 2).rounded() }
+              let geometry = lastGeometry else { return nil }
+        let frame = messageFrames[target.id]
+        if let frame { target.height = frame.height }
+        let travel = geometry.viewportHeight - target.height
+        let desired = geometry.viewportHeight * target.viewportFraction - target.fraction * target.height
+        let anchor = abs(travel) > 0.5 ? min(1, max(0, desired / travel)) : 0.5
+        if let frame, abs(frame.minY - anchor * travel) <= Self.scrollEpsilon {
+            target.appliedLayout = []
+            readingAnchor = target
+            return nil
+        }
+        // A lazy row may disappear during remeasurement. Its ID and last known
+        // height still let the scroll view restore it at the same visible point.
+        let layout = [target.height, geometry.viewportHeight, geometry.contentHeight, frame?.minY ?? -.infinity]
+            .map { ($0 * 2).rounded() }
         guard layout != target.appliedLayout else { return nil }
         target.appliedLayout = layout
         readingAnchor = target
-        let travel = geometry.viewportHeight - frame.height
-        let desired = geometry.viewportHeight / 2 - target.fraction * frame.height
-        let anchor = abs(travel) > 0.5 ? min(1, max(0, desired / travel)) : 0.5
-        guard abs(frame.minY - anchor * travel) > Self.scrollEpsilon else { return nil }
         return (target.id, anchor)
     }
 
@@ -224,10 +237,14 @@ final class ChatScrollState {
     }
 
     func endUserInteraction() {
+        guard isUserInteracting else { return }
         isUserInteracting = false
         // 停手时已在恢复阈值内：恢复跟随（滚轮减速阶段可能没有新的几何回调）
         if let lastGeometry, lastGeometry.distanceFromBottom <= Self.resumeDistance {
             isFollowingBottom = true
+            readingAnchor = nil
+        } else if !isFollowingBottom {
+            beginReadingReflow()
         }
     }
 
