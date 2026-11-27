@@ -5628,6 +5628,23 @@ struct ChatTranscriptViewport: ViewModifier {
     }
 }
 
+/// Small transcripts can measure every row, including a streaming reply that changes height.
+/// Longer conversations keep their offscreen Markdown views lazy.
+struct ChatTranscriptRows<Rows: View>: View {
+    let messageCount: Int
+    @ViewBuilder let rows: Rows
+
+    var body: some View {
+        if messageCount <= 32 {
+            VStack(alignment: .leading, spacing: 12) { rows }
+                .scrollTargetLayout()
+        } else {
+            LazyVStack(alignment: .leading, spacing: 12) { rows }
+                .scrollTargetLayout()
+        }
+    }
+}
+
 /// The divider moves the panes live. The transcript keeps its original proposal
 /// until release so TextKit and Markdown tables only reflow at the final width.
 struct ChatSplitLayout<Sessions: View, Conversation: View, Panel: View>: View {
@@ -7307,7 +7324,7 @@ public struct ChatView: View {
         let markdownContext = viewModel.markdownContext(for: session)
         let searchHitIds = Set(sessionSearchHits(in: session).map(\.id))
         return ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
+            ChatTranscriptRows(messageCount: session.messages.count) {
                 if session.messageOffset > 0 {
                     Button(L.string("chat.history.load_earlier")) { Task { await viewModel.loadEarlierMessages() } }
                         .disabled(viewModel.isRunningHere)
@@ -7388,7 +7405,6 @@ public struct ChatView: View {
                     .onDisappear { scrollState.forgetMessageFrame(message.id) }
                 }
             }
-            .scrollTargetLayout()
             .padding([.horizontal, .top])
             .padding(.bottom, 24)
         }

@@ -19,7 +19,7 @@ struct ChatScrollHostTests {
         try await waitForBottomMessage(host: hosting, window: window)
 
         // 追加一批长短不一的消息：内容高度变化后仍应回到锚点附近
-        model.items.append(contentsOf: (4...12).map(ChatScrollProbeModel.Item.init(number:)))
+        model.items.append(contentsOf: (4...40).map(ChatScrollProbeModel.Item.init(number:)))
         try await waitForBottomMessage(host: hosting, window: window)
     }
 
@@ -82,7 +82,7 @@ struct ChatScrollHostTests {
                 && (model.distanceFromBottom ?? .infinity) <= 2
         }
         // Keep the previous message and the start of the streaming reply on screen
-        // together so the lazy stack is actively rendering the reply during the edit.
+        // together while the reply is being edited.
         model.readerTarget = try #require(model.items.dropLast().last?.id)
         var lastPosition: (reader: CGFloat, reply: CGFloat)?
         var stableSince = ContinuousClock.now
@@ -257,7 +257,7 @@ private struct ChatScrollProbeView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
+                ChatTranscriptRows(messageCount: model.items.count) {
                     ForEach(model.items) { item in
                         let id = item.id
                         VStack(alignment: .leading, spacing: 6) {
@@ -288,7 +288,6 @@ private struct ChatScrollProbeView: View {
                         }
                     }
                 }
-                .scrollTargetLayout()
                 .padding([.horizontal, .top])
                 .padding(.bottom, 24)
             }
