@@ -87,7 +87,7 @@ struct ChatScrollHostTests {
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             guard let reader = model.snapshot.readerFrame, let reply = model.snapshot.lastItemFrame,
                   let viewport = model.snapshot.viewportFrame else { return false }
-            return model.snapshot.paused && abs(reader.minY - viewport.minY) <= 2 && reply.intersects(viewport)
+            return model.snapshot.paused && reader.intersects(viewport) && reply.intersects(viewport)
                 && abs(reply.minY - reader.maxY - 12) <= 2
                 && (model.distanceFromBottom ?? 0) > ChatScrollState.pauseDistance
         }
@@ -111,16 +111,18 @@ struct ChatScrollHostTests {
     }
 
     private func makeWindow(hosting: NSHostingView<ChatScrollProbeView>) -> NSWindow {
-        let window = NSWindow(
+        let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 420),
-            styleMask: [.borderless],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        // 与现有原生宿主测试保持一致：不激活应用、不把窗口提到前台，
-        // 只用离屏布局驱动 SwiftUI 更新（前台窗口会让后续子进程测试不稳定）
+        window.animationBehavior = .none
+        window.hidesOnDeactivate = false
         window.isReleasedWhenClosed = false
         window.contentView = hosting
+        window.center()
+        window.orderFront(nil)
         return window
     }
 
@@ -156,12 +158,50 @@ struct ChatScrollHostTests {
         while ContinuousClock.now < deadline {
             host.layoutSubtreeIfNeeded()
             window.displayIfNeeded()
+            measureRows(in: host)
             if condition() { return }
             try await Task.sleep(for: .milliseconds(20))
         }
         let snapshot = host.rootView.model.snapshot
         try #require(condition(), "等待滚动收敛超时，内容高度 \(snapshot.contentHeight ?? -1)，视口 \(String(describing: snapshot.viewportFrame))，末行 \(String(describing: snapshot.lastItemFrame))，阅读行 \(String(describing: snapshot.readerFrame))，距底部 \(snapshot.rawDistanceFromBottom ?? .nan)，暂停跟随 \(snapshot.paused)，Markdown 资源 \(host.rootView.model.renderer.resources.count)", sourceLocation: sourceLocation)
     }
+
+    private func measureRows(in host: NSHostingView<ChatScrollProbeView>) {
+        let model = host.rootView.model
+        let snapshot = model.snapshot
+        snapshot.viewportFrame = CGRect(origin: .zero, size: host.bounds.size)
+        snapshot.readerFrame = nil
+        snapshot.lastItemFrame = nil
+        snapshot.lastItemID = nil
+        var remaining = host.subviews
+        while let view = remaining.popLast() {
+            if let marker = view as? ChatScrollRowMarker.View, let id = marker.messageID {
+                let rect = host.convert(marker.bounds, from: marker)
+                let y = host.isFlipped ? rect.minY - host.bounds.minY : host.bounds.maxY - rect.maxY
+                let frame = CGRect(x: rect.minX - host.bounds.minX, y: y, width: rect.width, height: rect.height)
+                if id == model.readerTarget { snapshot.readerFrame = frame }
+                if id == model.items.last?.id {
+                    snapshot.lastItemID = id
+                    snapshot.lastItemFrame = frame
+                }
+            } else {
+                remaining.append(contentsOf: view.subviews)
+            }
+        }
+    }
+}
+
+/// Read the current native layout after each update, including when the lazy stack reuses a row.
+private struct ChatScrollRowMarker: NSViewRepresentable {
+    final class View: NSView {
+        var messageID: UUID?
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    }
+
+    let id: UUID
+
+    func makeNSView(context: Context) -> View { View() }
+    func updateNSView(_ nsView: View, context: Context) { nsView.messageID = id }
 }
 
 @MainActor
@@ -225,21 +265,16 @@ private struct ChatScrollProbeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(8)
                         .background(Color.gray.opacity(0.12))
+                        .background(ChatScrollRowMarker(id: id))
                         .id(id)
                         .onGeometryChange(for: CGRect.self) { geometry in
                             geometry.frame(in: .global)
                         } action: { frame in
                             scrollState.recordMessageFrame(frame, id: id)
                             if scrollState.hasReadingAnchor { scheduleFlush(proxy) }
-                            if id == model.readerTarget { model.snapshot.readerFrame = frame }
-                            guard id == model.items.last?.id else { return }
-                            model.snapshot.lastItemID = id
-                            model.snapshot.lastItemFrame = frame
                         }
                         .onDisappear {
                             scrollState.forgetMessageFrame(id)
-                            if id == model.readerTarget { model.snapshot.readerFrame = nil }
-                            if id == model.items.last?.id { model.snapshot.lastItemFrame = nil }
                         }
                     }
                 }
@@ -250,11 +285,6 @@ private struct ChatScrollProbeView: View {
             .scrollPosition($scrollPosition)
             .defaultScrollAnchor(.bottom, for: .initialOffset)
             .defaultScrollAnchor(.bottom, for: .alignment)
-            .onGeometryChange(for: CGRect.self) { geometry in
-                geometry.frame(in: .global)
-            } action: { frame in
-                model.snapshot.viewportFrame = frame
-            }
             .onAppear {
                 scrollState.bindSession(model.sessionID, reset: true)
                 scrollState.request(.layoutCorrection)

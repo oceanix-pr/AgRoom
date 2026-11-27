@@ -2,6 +2,13 @@
 set -eo pipefail
 
 log="$RUNNER_TEMP/package-tests.log"
+host="$RUNNER_TEMP/agroom-window-test-host"
+platform_dir=$(xcrun --sdk macosx --show-sdk-platform-path)
+frameworks="$platform_dir/Developer/Library/Frameworks"
+bin_dir=$(swift build --build-system native --show-bin-path)
+export AGROOM_TEST_BUNDLE="$bin_dir/AgRoomPackageTests.xctest"
+xcrun --sdk macosx swiftc -parse-as-library -F "$frameworks" -Xlinker -rpath -Xlinker "$frameworks" \
+    ../.github/scripts/macos-test-host.swift -o "$host"
 touch "$log"
 belongs_to_this_run() {
     local ancestor=$1
@@ -18,7 +25,7 @@ belongs_to_this_run() {
         fi
         echo "No test output for two minutes. Sampling the test process."
         ps -ax -o pid=,comm= |
-            awk '$NF ~ /\/(swiftpm-testing-helper|swift-testing-helper|AgRoomPackageTests|xctest)$/ {print $1}' |
+            awk '$NF ~ /\/agroom-window-test-host$/ {print $1}' |
         while read -r pid; do
             belongs_to_this_run "$pid" || continue
             stack="$RUNNER_TEMP/package-tests-$pid.sample"
@@ -39,8 +46,8 @@ trap 'kill "$observer" 2>/dev/null || true' EXIT
 
 # A pseudo-terminal flushes each Swift Testing event to Actions. On macOS
 # script returns the test command's status, including assertion failures.
-/usr/bin/script -q /dev/null swift test --skip-build --build-system native \
-    --force-resolved-versions --no-parallel "$1" ProductTaskCenterHostTests | tee "$log"
+/usr/bin/script -q /dev/null /usr/bin/env DYLD_FRAMEWORK_PATH="$frameworks" \
+    DYLD_LIBRARY_PATH="$platform_dir/Developer/usr/lib" "$host" --no-parallel "$1" ProductTaskCenterHostTests | tee "$log"
 if ! grep -Eq 'Test run with [1-9][0-9]* tests? (in [1-9][0-9]* suites? )?passed after' "$log"; then
     echo "::error::Swift Testing exited without reporting a completed suite."
     exit 1
