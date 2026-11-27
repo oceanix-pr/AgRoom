@@ -8,7 +8,7 @@ import Foundation
 /// 统一在一份数据里取内容高度、视口高度、偏移与底部 inset，
 /// 避免分别测量内容底边和视口底边、再用全局坐标跨布局时刻比较。
 struct ChatScrollGeometry: Equatable {
-    /// 内容总高度（消息 + 附属内容 + 底部锚点 + 外边距）
+    /// 内容总高度（消息、附属内容与外边距）
     var contentHeight: CGFloat
     /// 滚动容器视口高度（窗口、输入框、确认卡变化后随之变化）
     var viewportHeight: CGFloat

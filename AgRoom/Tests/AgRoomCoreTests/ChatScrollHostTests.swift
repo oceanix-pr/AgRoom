@@ -5,7 +5,7 @@ import Testing
 @testable import AgRoomUI
 
 /// 原生宿主的滚动集成验证：构造长短消息混排、异步正文增高 / 收缩和可变视口的列表，
-/// 检查追加消息与布局变化后跟随模式仍能把底部锚点稳定收敛到视口底部。
+/// 检查追加消息与布局变化后，滚动容器和最后一条可见消息都已到达底部。
 @MainActor
 @Suite("Chat scroll host integration")
 struct ChatScrollHostTests {
@@ -16,18 +16,11 @@ struct ChatScrollHostTests {
         let window = makeWindow(hosting: hosting)
         defer { window.close() }
 
-        try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
-        }
-        assertBottomMessageVisible(model)
+        try await waitForBottomMessage(host: hosting, window: window)
 
         // 追加一批长短不一的消息：内容高度变化后仍应回到锚点附近
         model.items.append(contentsOf: Array(4...12))
-        try await waitUntil(host: hosting, window: window, timeout: 5) {
-            model.snapshot.lastItemID == model.items.last
-                && (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
-        }
-        assertBottomMessageVisible(model)
+        try await waitForBottomMessage(host: hosting, window: window)
     }
 
     @Test("异步正文增高、高度收缩与视口变化后保持底部")
@@ -38,10 +31,7 @@ struct ChatScrollHostTests {
         let window = makeWindow(hosting: hosting)
         defer { window.close() }
 
-        try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
-        }
-        assertBottomMessageVisible(model)
+        try await waitForBottomMessage(host: hosting, window: window)
         let initialContentHeight = model.snapshot.contentHeight ?? 0
         let initialViewportHeight = try #require(model.snapshot.viewportHeight)
 
@@ -50,10 +40,7 @@ struct ChatScrollHostTests {
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             (model.snapshot.contentHeight ?? 0) >= initialContentHeight + 300
         }
-        try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
-        }
-        assertBottomMessageVisible(model)
+        try await waitForBottomMessage(host: hosting, window: window)
 
         // 模拟正文转入折叠思考区：高度骤降后偏移可能越过新底部，必须重新贴底，
         // 不能在最后一条消息下方残留空白
@@ -61,38 +48,28 @@ struct ChatScrollHostTests {
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             (model.snapshot.contentHeight ?? .greatestFiniteMagnitude) <= initialContentHeight + 2
         }
-        try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.snapshot.rawDistanceFromBottom ?? -CGFloat.greatestFiniteMagnitude) >= -2
-                && (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
-        }
-        assertBottomMessageVisible(model)
+        try await waitForBottomMessage(host: hosting, window: window)
 
         // 输入框展开 / 确认卡出现会收缩视口；跟随状态应按新视口重新贴底
         window.setContentSize(NSSize(width: 360, height: 300))
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             abs((model.snapshot.viewportHeight ?? .infinity) - (initialViewportHeight - 120)) <= 2
         }
-        try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
-        }
-        assertBottomMessageVisible(model)
+        try await waitForBottomMessage(host: hosting, window: window)
 
         // 视口恢复后同样保持底部
         window.setContentSize(NSSize(width: 360, height: 460))
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             abs((model.snapshot.viewportHeight ?? .infinity) - (initialViewportHeight + 40)) <= 2
         }
-        try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
-        }
-        assertBottomMessageVisible(model)
+        try await waitForBottomMessage(host: hosting, window: window)
     }
 
     @Test("Scrolling up during a Markdown stream preserves the reading position through final layout")
     func readingEarlierMessageDuringStream() async throws {
         let model = ChatScrollProbeModel()
         model.items = Array(1...18)
-        model.markdown = "[reference][late]\n\n```swift\n" + (1...16).map { "let value\($0) = \($0)" }.joined(separator: "\n")
+        model.markdown = "[reference][late]\n\n```swift\n" + (1...48).map { "let value\($0) = \($0)" }.joined(separator: "\n")
         let hosting = NSHostingView(rootView: ChatScrollProbeView(model: model))
         let window = makeWindow(hosting: hosting)
         defer { window.close() }
@@ -100,9 +77,14 @@ struct ChatScrollHostTests {
             model.renderer.segments.contains { if case .codeBlock = $0 { true } else { false } }
                 && (model.distanceFromBottom ?? .infinity) <= 2
         }
-        model.readerTarget = 14
+        // Keep the previous message and the start of the streaming reply on screen
+        // together so the lazy stack is actively rendering the reply during the edit.
+        model.readerTarget = 17
         try await waitUntil(host: hosting, window: window, timeout: 5) {
-            model.snapshot.paused && model.snapshot.readerFrame != nil
+            guard let reader = model.snapshot.readerFrame, let reply = model.snapshot.lastItemFrame,
+                  let viewport = model.snapshot.viewportFrame else { return false }
+            return model.snapshot.paused && reader.intersects(viewport) && reply.intersects(viewport)
+                && (model.distanceFromBottom ?? 0) > ChatScrollState.pauseDistance
         }
         let position = try #require(model.snapshot.readerFrame?.minY)
         model.markdown += "\n```\n\n![fixture](late.png)\n\n[late]: https://example.invalid/source"
@@ -134,28 +116,25 @@ struct ChatScrollHostTests {
         return window
     }
 
-    /// 跟随模式下最后一条消息应紧贴视口底部（内容底部 padding 约 16pt），
-    /// 而不是停在视口上方留下空白。
-    private func assertBottomMessageVisible(
-        _ model: ChatScrollProbeModel,
+    /// SwiftUI can deliver a new viewport size before the child's layout callback.
+    /// Wait for both measurements, including the signed offset after a resize.
+    private func waitForBottomMessage(
+        host: NSHostingView<ChatScrollProbeView>,
+        window: NSWindow,
         sourceLocation: SourceLocation = #_sourceLocation
-    ) {
-        guard let last = model.snapshot.lastItemFrame,
-              let viewport = model.snapshot.viewportFrame else {
-            Issue.record("未收到最后一条消息或视口的实际布局", sourceLocation: sourceLocation)
-            return
+    ) async throws {
+        let model = host.rootView.model
+        let snapshot = model.snapshot
+        try await waitUntil(host: host, window: window, timeout: 5, sourceLocation: sourceLocation) {
+            guard snapshot.lastItemID == model.items.last,
+                  let last = snapshot.lastItemFrame, let viewport = snapshot.viewportFrame,
+                  let contentHeight = snapshot.contentHeight, let viewportHeight = snapshot.viewportHeight,
+                  let distance = snapshot.rawDistanceFromBottom else { return false }
+            let gap = viewport.maxY - last.maxY
+            return abs(viewport.height - viewportHeight) <= 2 && last.intersects(viewport)
+                && (-2...32).contains(gap) && distance <= 2
+                && (contentHeight <= viewportHeight || distance >= -2)
         }
-        #expect(
-            last.intersects(viewport),
-            "最后一条消息与视口不相交：message=\(last) viewport=\(viewport)",
-            sourceLocation: sourceLocation
-        )
-        let gap = viewport.maxY - last.maxY
-        #expect(
-            gap >= -2 && gap <= 32,
-            "最后一条消息距视口底部 \(gap)pt，未贴底",
-            sourceLocation: sourceLocation
-        )
     }
 
     private func waitUntil(
@@ -173,7 +152,7 @@ struct ChatScrollHostTests {
             try await Task.sleep(for: .milliseconds(20))
         }
         let snapshot = host.rootView.model.snapshot
-        try #require(condition(), "等待滚动收敛超时，内容高度 \(snapshot.contentHeight ?? -1)，视口高度 \(snapshot.viewportHeight ?? -1)，距底部 \(snapshot.rawDistanceFromBottom ?? .nan)", sourceLocation: sourceLocation)
+        try #require(condition(), "等待滚动收敛超时，内容高度 \(snapshot.contentHeight ?? -1)，视口 \(String(describing: snapshot.viewportFrame))，末行 \(String(describing: snapshot.lastItemFrame))，阅读行 \(String(describing: snapshot.readerFrame))，距底部 \(snapshot.rawDistanceFromBottom ?? .nan)，暂停跟随 \(snapshot.paused)，Markdown 资源 \(host.rootView.model.renderer.resources.count)", sourceLocation: sourceLocation)
     }
 }
 
@@ -242,11 +221,9 @@ private struct ChatScrollProbeView: View {
                             model.snapshot.lastItemFrame = frame
                         }
                     }
-                    Color.clear
-                        .frame(height: 1)
-                        .padding(.bottom)
                 }
                 .padding([.horizontal, .top])
+                .padding(.bottom, 24)
             }
             .scrollPosition($scrollPosition)
             .defaultScrollAnchor(.bottom, for: .initialOffset)

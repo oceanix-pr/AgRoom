@@ -30,6 +30,19 @@ extension NSWindow {
                 try #require(control.sendAction(action, to: control.target), sourceLocation: sourceLocation)
                 return
             }
+            if let control = view as? NSControl, let cell = control.cell as? NSButtonCell,
+               !(cell is NSPopUpButtonCell), let action = control.action {
+                // A plain AppKit button also waits for a mouse-up inside mouseDown.
+                // Invoke the hit control's action without entering the tracking loop.
+                try #require(control.isEnabled, sourceLocation: sourceLocation)
+                switch cell.accessibilityRole() {
+                case .radioButton: cell.state = .on
+                case .checkBox, .disclosureTriangle: cell.setNextState()
+                default: break
+                }
+                try #require(control.sendAction(action, to: control.target), sourceLocation: sourceLocation)
+                return
+            }
             hit = view.superview
         }
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
@@ -47,13 +60,15 @@ struct NativeWindowClickTests {
     private final class Probe: NSView {
         var received: [NSEvent.EventType] = []
         var selections: [Int] = []
+        var checked: [NSControl.StateValue] = []
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
         override func mouseDown(with event: NSEvent) { received.append(event.type) }
         override func mouseUp(with event: NSEvent) { received.append(event.type) }
         @objc func selected(_ control: NSSegmentedControl) { selections.append(control.selectedSegment) }
+        @objc func toggle(_ control: NSButton) { checked.append(control.state) }
     }
 
-    @Test("A segment activates once and a custom view receives its mouse release")
+    @Test("Native controls activate once and a custom view receives its mouse release")
     func activatesControlAndCustomView() throws {
         let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 180, height: 100),
                               styleMask: .borderless, backing: .buffered, defer: false)
@@ -66,10 +81,15 @@ struct NativeWindowClickTests {
         control.frame = .init(x: 10, y: 55, width: 140, height: 28)
         control.selectedSegment = 0
         probe.addSubview(control)
+        let checkbox = NSButton(checkboxWithTitle: "Enable", target: probe, action: #selector(Probe.toggle(_:)))
+        checkbox.frame = .init(x: 10, y: 30, width: 110, height: 20)
+        probe.addSubview(checkbox)
         window.orderFront(nil)
         try window.sendTestClick(at: .init(x: 110, y: 69), matching: "Two")
         #expect(probe.selections == [1] && control.selectedSegment == 1)
         try window.sendTestClick(at: .init(x: 20, y: 20))
         #expect(probe.received == [.leftMouseDown, .leftMouseUp])
+        try window.sendTestClick(at: .init(x: 30, y: 40), matching: "Enable")
+        #expect(probe.checked == [.on] && checkbox.state == .on)
     }
 }

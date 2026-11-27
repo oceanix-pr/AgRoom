@@ -7387,12 +7387,9 @@ public struct ChatView: View {
                     }
                     .onDisappear { scrollState.forgetMessageFrame(message.id) }
                 }
-                // 为最后一条消息和附属卡片保留底部留白。
-                Color.clear
-                    .frame(height: 1)
-                    .padding(.bottom)
             }
             .padding([.horizontal, .top])
+            .padding(.bottom, 24)
         }
         .coordinateSpace(name: "chatReadingViewport")
         .scrollPosition($scrollPosition)

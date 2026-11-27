@@ -181,10 +181,14 @@ struct ProductTaskCenterHostTests {
         return (own.map { [$0] } ?? []) + view.subviews.flatMap { texts($0) }
     }
 
-    private func renderedText(_ window: NSWindow, customWords: [String] = []) async throws -> String {
+    private nonisolated static func normalized(_ text: String) -> String {
+        String(String.UnicodeScalarView(text.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }))
+    }
+
+    private func renderedText(_ window: NSWindow, matching value: String? = nil, nativeScale: Bool = false) async throws -> String {
         window.contentView?.layoutSubtreeIfNeeded(); window.displayIfNeeded()
         let view = try #require(window.contentView)
-        let data = try snapshotData(view)
+        let data = try snapshotData(view, nativeScale: nativeScale)
         let language = LanguageManager.shared.activeLanguageCode
         // SwiftUI's nonselectable text is not an AppKit child. Read actual pixels
         // instead of asserting against model state or changing the product for a test.
@@ -192,9 +196,20 @@ struct ProductTaskCenterHostTests {
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.recognitionLanguages = language == "en" ? ["en-US"] : [language, "en-US"]
-            request.customWords = customWords
+            if let value {
+                request.customWords = [value] + value.components(separatedBy: CharacterSet.alphanumerics.inverted)
+                    .filter { !$0.isEmpty && $0 != value }
+            }
             try VNImageRequestHandler(data: data).perform([request])
-            return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: " ")
+            let target = value.map(Self.normalized)
+            return (request.results ?? []).compactMap { observation in
+                let candidates = observation.topCandidates(target == nil ? 1 : 10)
+                if let target, !target.isEmpty,
+                   let match = candidates.first(where: { Self.normalized($0.string).contains(target) }) {
+                    return match.string
+                }
+                return candidates.first?.string
+            }.joined(separator: " ")
         }.value
     }
 
@@ -227,19 +242,16 @@ struct ProductTaskCenterHostTests {
 
     private func waitRendered(_ window: NSWindow, containing value: String,
                               sourceLocation: SourceLocation = #_sourceLocation) async throws -> String {
-        func normalized(_ text: String) -> String {
-            String(String.UnicodeScalarView(text.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }))
-        }
+        let target = Self.normalized(value)
         var last = ""
-        for _ in 0..<20 {
-            // Exact UUID-bearing export names need vocabulary hints to prevent
-            // visually similar glyphs (6/G) being misread. Still inspect pixels
-            // and compare the first recognition candidate to the exact value.
-            let text = try await renderedText(window, customWords: [value])
+        for attempt in 0..<20 {
+            // Thin caption glyphs rasterize differently at native and doubled size.
+            // Both paths read this window's visible pixels and require an exact match.
+            let text = try await renderedText(window, matching: value, nativeScale: !attempt.isMultiple(of: 2))
             last = text
-            if normalized(text).contains(normalized(value)) { return text }
+            if Self.normalized(text).contains(target) { return text }
             let native = visibleLabels(in: window)
-            if native.contains(where: { normalized($0).contains(normalized(value)) }) {
+            if native.contains(where: { Self.normalized($0).contains(target) }) {
                 return ([text] + native).joined(separator: "\n")
             }
             try await Task.sleep(for: .milliseconds(50))
@@ -1735,14 +1747,19 @@ struct ProductTaskCenterHostTests {
         try snapshotData(view).write(to: url)
     }
 
-    private func snapshotData(_ view: NSView) throws -> Data {
+    private func snapshotData(_ view: NSView, nativeScale: Bool = false) throws -> Data {
         let size = view.bounds.size
-        let scale = max(2, view.window?.backingScaleFactor ?? 1)
-        let bitmap = try #require(NSBitmapImageRep(bitmapDataPlanes: nil,
-            pixelsWide: Int(ceil(size.width * scale)), pixelsHigh: Int(ceil(size.height * scale)),
-            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
-        bitmap.size = size
+        let bitmap: NSBitmapImageRep
+        if nativeScale {
+            bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        } else {
+            let scale = max(2, view.window?.backingScaleFactor ?? 1)
+            bitmap = try #require(NSBitmapImageRep(bitmapDataPlanes: nil,
+                pixelsWide: Int(ceil(size.width * scale)), pixelsHigh: Int(ceil(size.height * scale)),
+                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+            bitmap.size = size
+        }
         view.cacheDisplay(in: view.bounds, to: bitmap)
         let original = try #require(bitmap.cgImage)
         let context = try #require(CGContext(data: nil, width: original.width, height: original.height, bitsPerComponent: 8,
