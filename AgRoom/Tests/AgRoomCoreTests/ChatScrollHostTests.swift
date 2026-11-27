@@ -32,13 +32,13 @@ struct ChatScrollHostTests {
         defer { window.close() }
 
         try await waitForBottomMessage(host: hosting, window: window)
-        let initialContentHeight = model.snapshot.contentHeight ?? 0
+        let initialRowHeight = try #require(model.snapshot.lastItemFrame?.height)
         let initialViewportHeight = try #require(model.snapshot.viewportHeight)
 
         // 模拟 Markdown 在首轮排版后异步解码出一大段正文：高度增长后仍应贴底
         model.detailHeight = 360
         try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.snapshot.contentHeight ?? 0) >= initialContentHeight + 300
+            (model.snapshot.lastItemFrame?.height ?? 0) >= initialRowHeight + 300
         }
         try await waitForBottomMessage(host: hosting, window: window)
 
@@ -46,7 +46,8 @@ struct ChatScrollHostTests {
         // 不能在最后一条消息下方残留空白
         model.detailHeight = 0
         try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.snapshot.contentHeight ?? .greatestFiniteMagnitude) <= initialContentHeight + 2
+            guard let height = model.snapshot.lastItemFrame?.height else { return false }
+            return abs(height - initialRowHeight) <= 2
         }
         try await waitForBottomMessage(host: hosting, window: window)
 
