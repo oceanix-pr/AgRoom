@@ -68,10 +68,10 @@ struct ChatImmediateSendTests {
         return Fixture(root: root, queue: queue, model: model, probe: probe)
     }
 
-    private func wait(_ condition: () -> Bool) async throws {
+    private func wait(sourceLocation: SourceLocation = #_sourceLocation, _ condition: () -> Bool) async throws {
         let deadline = ContinuousClock.now + .seconds(10)
         while !condition(), ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(5)) }
-        try #require(condition())
+        try #require(condition(), sourceLocation: sourceLocation)
     }
 
     @Test("Immediate messages wait for cancellation cleanup, retain the queue and stay in their originating session", arguments: [false, true])
@@ -113,7 +113,8 @@ struct ChatImmediateSendTests {
         #expect(saved.messages[1].runStatus == .cancelled)
         #expect(saved.messages.filter { $0.role == .user }.map(\.content) == ["first", "urgent"])
         f.probe.release("urgent")
-        try await wait { f.probe.requests.count == 4 && !f.model.isAnyRunning }
+        try await wait { f.probe.requests.count == 4 }
+        try await wait { !f.model.isAnyRunning }
         #expect(f.probe.requests.filter { $0.sessionID == id }.map(\.taskRequest) == ["first", "urgent", "queued-one"])
         #expect(f.model.session(id: other)?.messages.filter { $0.role == .user }.map(\.content) == ["other-session"])
     }

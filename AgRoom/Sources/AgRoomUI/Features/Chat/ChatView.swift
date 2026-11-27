@@ -2264,6 +2264,8 @@ final class ChatViewModel: MenuBarActivitySource {
         }
         /// 队列存属会话：所有变更都要求调用方给出明确会话 id
         private var queuesBySession: [UUID: [QueuedMessage]] = [:]
+        /// 已获准续发，但必须等这个会话的其他写入结束。
+        var waitingForSave: Set<UUID> = []
         /// 各会话已摘出但尚未确认发送完成的队头（发送成功提交 / 失败回退）
         private var reservationsBySession: [UUID: Reservation] = [:]
         /// 立即发送有独立槽位，队列满员时仍可中断当前轮。必须等指定运行收尾后才能消费。
@@ -2367,6 +2369,7 @@ final class ChatViewModel: MenuBarActivitySource {
             queuesBySession[sessionId] = nil
             reservationsBySession[sessionId] = nil
             immediateBySession[sessionId] = nil
+            waitingForSave.remove(sessionId)
         }
     }
 
@@ -2448,8 +2451,12 @@ final class ChatViewModel: MenuBarActivitySource {
     private func drainQueue(for sessionId: UUID, loadMessages: Bool = false) {
         // 判定与动作都只针对目标会话：其他会话在跑/挂起不冻结本会话队列
         guard canAcceptSend(for: sessionId), runState.current(for: sessionId) == nil,
-              !preparingGoalSessions.contains(sessionId), savingCounts[sessionId, default: 0] == 0,
+              sendQueue.hasPending(for: sessionId), !preparingGoalSessions.contains(sessionId),
               pendingConfirmations[sessionId] == nil, pendingQuestions[sessionId] == nil else { return }
+        guard savingCounts[sessionId, default: 0] == 0 else {
+            sendQueue.waitingForSave.insert(sessionId)
+            return
+        }
         guard let idx = sessions.firstIndex(where: { $0.id == sessionId }) else { return }
         // 消息未加载（摘要态切换瞬间）时不出队：performSend 会静默失败导致队头丢失。
         // 判定用待发会话而非活跃会话——后台会话的积压不得因为「正在看别的会话」而丢
@@ -4872,7 +4879,7 @@ final class ChatViewModel: MenuBarActivitySource {
               sessions[loc.sessionIndex].isMessagesLoaded, let sessionService else { return false }
         if let run, !isCurrentRun(run) || run.hasFinalResponse { return true }
         savingCounts[sessionId, default: 0] += 1
-        defer { savingCounts[sessionId, default: 0] -= 1 }
+        defer { finishSessionSave(for: sessionId) }
         sessions[loc.sessionIndex].updatedAt = Date()
         do {
             if let run {
@@ -4912,6 +4919,13 @@ final class ChatViewModel: MenuBarActivitySource {
         }
     }
 
+    private func finishSessionSave(for id: UUID) {
+        savingCounts[id, default: 0] -= 1
+        guard savingCounts[id] == 0, sendQueue.waitingForSave.contains(id) else { return }
+        sendQueue.waitingForSave.remove(id)
+        drainQueue(for: id)
+    }
+
     /// 重试持久化活跃会话（上次写库失败后由界面触发）。
     /// 内存版本始终保留，重试成功即清除「尚未保存」标记
     func retryPersistActiveSession() async {
@@ -4930,7 +4944,7 @@ final class ChatViewModel: MenuBarActivitySource {
         let terminalRun = runState.current(for: id).flatMap { $0.hasFinalResponse ? $0 : nil }
         savingCounts[id, default: 0] += 1
         defer {
-            savingCounts[id, default: 0] -= 1
+            finishSessionSave(for: id)
             if persistFailuresBySession[id] == nil, sendQueue.immediate(for: id)?.waitingForRunID == nil {
                 if sendQueue.immediate(for: id) != nil { drainQueue(for: id) }
             }
@@ -7376,9 +7390,10 @@ public struct ChatView: View {
                 // 避免最后一条消息从空占位变为正文、下方再插入成果卡时定位目标漂移
                 Color.clear
                     .frame(height: 1)
+                    .padding(.bottom)
                     .id(ChatScrollState.bottomAnchorID)
             }
-            .padding()
+            .padding([.horizontal, .top])
         }
         .coordinateSpace(name: "chatReadingViewport")
         .onChange(of: readingPointSize) { _, _ in

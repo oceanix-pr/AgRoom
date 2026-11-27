@@ -263,7 +263,8 @@ struct MarkdownOfflineRenderingTests {
                 return view.subviews.flatMap(images)
             }
             let image = try #require(images(host).first)
-            #expect(abs(image.frame.width - (width - 32)) < 1)
+            let scroll = try #require(image.enclosingScrollView)
+            #expect(abs(image.frame.width - (scroll.contentView.bounds.width - 32)) < 1)
             #expect(image.frame.height > 400)
             #expect(abs(image.frame.height / image.frame.width - resource.image.size.height / resource.image.size.width) < 0.01)
         }

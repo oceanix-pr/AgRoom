@@ -961,6 +961,7 @@ struct SidebarNavigationLayout<Sidebar: View, CompactSidebar: View, Detail: View
     @Binding var columnVisibility: NavigationSplitViewVisibility
     let sidebarWidths: (minimum: CGFloat, ideal: CGFloat, maximum: CGFloat)
     let reduceMotion: Bool
+    var transitionDuration: TimeInterval = 0.26
     @ViewBuilder var sidebar: Sidebar
     @ViewBuilder var compactSidebar: CompactSidebar
     @ViewBuilder var detail: Detail
@@ -1003,7 +1004,7 @@ struct SidebarNavigationLayout<Sidebar: View, CompactSidebar: View, Detail: View
             }
             // 必须覆盖整个横向布局，才能让详情位移与侧栏宽度使用同一进度。
             // 只对展开状态加动画；窗口缩放、分隔条拖拽和页面内部状态不触发此动画。
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.26), value: isCollapsed)
+            .animation(reduceMotion ? nil : .easeInOut(duration: transitionDuration), value: isCollapsed)
             .toolbar { sidebarToggle }
         }
     }

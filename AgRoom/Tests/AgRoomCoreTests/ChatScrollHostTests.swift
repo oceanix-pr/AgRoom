@@ -24,7 +24,8 @@ struct ChatScrollHostTests {
         // 追加一批长短不一的消息：内容高度变化后仍应回到锚点附近
         model.items.append(contentsOf: Array(4...12))
         try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
+            model.snapshot.lastItemID == model.items.last
+                && (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
         }
         assertBottomMessageVisible(model)
     }
@@ -42,6 +43,7 @@ struct ChatScrollHostTests {
         }
         assertBottomMessageVisible(model)
         let initialContentHeight = model.snapshot.contentHeight ?? 0
+        let initialViewportHeight = try #require(model.snapshot.viewportHeight)
 
         // 模拟 Markdown 在首轮排版后异步解码出一大段正文：高度增长后仍应贴底
         model.detailHeight = 360
@@ -68,7 +70,7 @@ struct ChatScrollHostTests {
         // 输入框展开 / 确认卡出现会收缩视口；跟随状态应按新视口重新贴底
         window.setContentSize(NSSize(width: 360, height: 300))
         try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.snapshot.viewportHeight ?? .greatestFiniteMagnitude) <= 305
+            abs((model.snapshot.viewportHeight ?? .infinity) - (initialViewportHeight - 120)) <= 2
         }
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
@@ -78,7 +80,7 @@ struct ChatScrollHostTests {
         // 视口恢复后同样保持底部
         window.setContentSize(NSSize(width: 360, height: 460))
         try await waitUntil(host: hosting, window: window, timeout: 5) {
-            (model.snapshot.viewportHeight ?? 0) >= 455
+            abs((model.snapshot.viewportHeight ?? .infinity) - (initialViewportHeight + 40)) <= 2
         }
         try await waitUntil(host: hosting, window: window, timeout: 5) {
             (model.distanceFromBottom ?? .greatestFiniteMagnitude) <= 2
@@ -157,19 +159,21 @@ struct ChatScrollHostTests {
     }
 
     private func waitUntil(
-        host: NSView,
+        host: NSHostingView<ChatScrollProbeView>,
         window: NSWindow,
         timeout: TimeInterval,
+        sourceLocation: SourceLocation = #_sourceLocation,
         _ condition: @MainActor () -> Bool
     ) async throws {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
+        let deadline = ContinuousClock.now + .seconds(timeout)
+        while ContinuousClock.now < deadline {
             host.layoutSubtreeIfNeeded()
             window.displayIfNeeded()
             if condition() { return }
             try await Task.sleep(for: .milliseconds(20))
         }
-        Issue.record("等待滚动收敛超时")
+        let snapshot = host.rootView.model.snapshot
+        try #require(condition(), "等待滚动收敛超时，内容高度 \(snapshot.contentHeight ?? -1)，视口高度 \(snapshot.viewportHeight ?? -1)，距底部 \(snapshot.rawDistanceFromBottom ?? .nan)", sourceLocation: sourceLocation)
     }
 }
 
@@ -195,6 +199,7 @@ final class ChatScrollProbeModel {
 final class ChatScrollProbeSnapshot {
     var paused = false
     var readerFrame: CGRect?
+    var lastItemID: Int?
     var lastItemFrame: CGRect?
     var viewportFrame: CGRect?
     var contentHeight: CGFloat?
@@ -232,14 +237,16 @@ private struct ChatScrollProbeView: View {
                         } action: { frame in
                             if item == model.readerTarget { model.snapshot.readerFrame = frame }
                             guard item == model.items.last else { return }
+                            model.snapshot.lastItemID = item
                             model.snapshot.lastItemFrame = frame
                         }
                     }
                     Color.clear
                         .frame(height: 1)
+                        .padding(.bottom)
                         .id(ChatScrollState.bottomAnchorID)
                 }
-                .padding()
+                .padding([.horizontal, .top])
             }
             .defaultScrollAnchor(.bottom, for: .initialOffset)
             .defaultScrollAnchor(.bottom, for: .alignment)
@@ -250,6 +257,8 @@ private struct ChatScrollProbeView: View {
             }
             .onAppear {
                 scrollState.bindSession(model.sessionID, reset: true)
+                scrollState.request(.layoutCorrection)
+                scheduleFlush(proxy: proxy)
             }
             .onScrollGeometryChange(for: ChatScrollGeometry.self) { geometry in
                 ChatScrollGeometry(

@@ -28,5 +28,16 @@ jobs:
           GIT_CONFIG_KEY_0: submodule.SQLiteCustom/src.update
           GIT_CONFIG_VALUE_0: none
         run: swift package resolve --force-resolved-versions
-      - name: Run the core suite with locked dependencies
-        run: swift test --build-system native --force-resolved-versions --no-parallel
+      - name: Build application and tests with locked dependencies
+        id: build
+        run: swift build --build-tests --build-system native --force-resolved-versions
+      - name: Run native task center tests
+        timeout-minutes: 17
+        env:
+          NSUnbufferedIO: "YES"
+        run: swift test --skip-build --build-system native --force-resolved-versions --no-parallel --filter ProductTaskCenterHostTests
+      - name: Run remaining package tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          NSUnbufferedIO: "YES"
+        run: swift test --skip-build --build-system native --force-resolved-versions --no-parallel --skip ProductTaskCenterHostTests

@@ -389,7 +389,8 @@ struct SidebarNavigationHostTests {
             SidebarNavigationLayout(
                 columnVisibility: Binding(get: { state.visibility }, set: { state.visibility = $0 }),
                 sidebarWidths: (140, 160, 220),
-                reduceMotion: reduceMotion
+                reduceMotion: reduceMotion,
+                transitionDuration: 1
             ) {
                 VStack { SpaceSwitcher(spaceStore: store); Text("Expanded navigation"); Spacer() }
             } compactSidebar: {
@@ -433,7 +434,8 @@ struct SidebarNavigationHostTests {
             window.contentView?.layoutSubtreeIfNeeded()
             let expandedX = detail.convert(detail.bounds, to: host.view).minX
             try triggerSidebarVisibilityAction(in: window, state: state)
-            let collapse = try await transitionPositions(in: window, detail: detail, relativeTo: host.view, startingAt: expandedX)
+            let collapse = try await transitionPositions(in: window, detail: detail, relativeTo: host.view,
+                                                        from: expandedX, to: expandedX - 96)
             let collapsedX = try #require(collapse.last)
             #expect(abs(expandedX - collapsedX - 96) < 1)
             expectContinuousTransition(collapse, reduceMotion: reduceMotion)
@@ -445,7 +447,8 @@ struct SidebarNavigationHostTests {
 
             state.selection = .files
             try triggerSidebarVisibilityAction(in: window, state: state)
-            let expansion = try await transitionPositions(in: window, detail: detail, relativeTo: host.view, startingAt: collapsedX)
+            let expansion = try await transitionPositions(in: window, detail: detail, relativeTo: host.view,
+                                                         from: collapsedX, to: expandedX)
             #expect(abs((expansion.last ?? 0) - expandedX) < 1)
             expectContinuousTransition(expansion, reduceMotion: reduceMotion)
             #expect(state.visibility == .all)
@@ -470,12 +473,15 @@ struct SidebarNavigationHostTests {
     }
 
     private func transitionPositions(in window: NSWindow, detail: NSView, relativeTo host: NSView,
-                                     startingAt origin: CGFloat) async throws -> [CGFloat] {
+                                     from origin: CGFloat, to target: CGFloat) async throws -> [CGFloat] {
         var positions = [origin]
-        for _ in 0..<30 {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while ContinuousClock.now < deadline {
             window.contentView?.layoutSubtreeIfNeeded()
             window.displayIfNeeded()
-            positions.append(detail.convert(detail.bounds, to: host).minX)
+            let position = detail.convert(detail.bounds, to: host).minX
+            positions.append(position)
+            if abs(position - target) < 0.01 { break }
             try await Task.sleep(for: .milliseconds(16))
         }
         return positions
