@@ -2062,6 +2062,10 @@ public final class DispatcherEngine: @unchecked Sendable {
             return "⚠️ 当前模型不支持图像输入，图片已被移除，以下回复仅基于文字内容。"
         case "zh-Hant":
             return "⚠️ 目前模型不支援影像輸入，圖片已被移除，以下回覆僅基於文字內容。"
+        case "es": return "⚠️ Este modelo admite texto. La respuesta se basa en el texto del mensaje."
+        case "fr": return "⚠️ Ce modèle accepte le texte. La réponse se base sur le texte du message."
+        case "ar": return "⚠️ يدعم هذا النموذج النص. تستند الإجابة إلى نص الرسالة."
+        case "ru": return "⚠️ Эта модель принимает текст. Ответ основан на тексте сообщения."
         default:
             return "⚠️ The current model does not support image input. The attached image(s) were removed; the reply below is based on text only."
         }
@@ -2074,6 +2078,10 @@ public final class DispatcherEngine: @unchecked Sendable {
             return "⚠️ 输出已达到单次回复上限并被截断，续写未能补全。可提高设置中的「单次回复上限」，或直接说「继续」。"
         case "zh-Hant":
             return "⚠️ 輸出已達單次回覆上限而被截斷，續寫未能補齊。可提高設定中的「單次回覆上限」，或直接說「繼續」。"
+        case "es": return "⚠️ Se alcanzó el límite de la respuesta. Aumenta el límite en Ajustes o escribe «continúa»."
+        case "fr": return "⚠️ La limite de réponse est atteinte. Augmentez-la dans les réglages ou écrivez «continuer»."
+        case "ar": return "⚠️ وصلت الإجابة إلى الحد الأقصى. ارفع الحد في الإعدادات أو اكتب «تابع»."
+        case "ru": return "⚠️ Достигнут лимит ответа. Увеличьте его в настройках или напишите «продолжай»."
         default:
             return "⚠️ The output hit the per-response token limit and was cut off; continuation did not complete. Raise \"Max tokens per response\" in Settings, or just say \"continue\"."
         }
@@ -2084,15 +2092,14 @@ public final class DispatcherEngine: @unchecked Sendable {
     private static func uiLanguageCode() -> String {
         let raw = UserDefaults.standard.string(forKey: "agroom.language") ?? "system"
         switch raw {
-        case "zh-Hans", "zh-Hant", "en":
+        case "zh-Hans", "zh-Hant", "en", "es", "fr", "ar", "ru":
             return raw
         default:
-            let preferred = Locale.preferredLanguages.first ?? "en"
-            if preferred.hasPrefix("zh-Hant") || preferred.hasPrefix("zh-TW") || preferred.hasPrefix("zh-HK") {
-                return "zh-Hant"
-            }
-            if preferred.hasPrefix("zh") {
-                return "zh-Hans"
+            for preferred in Locale.preferredLanguages {
+                if preferred.hasPrefix("zh-Hant") || preferred.hasPrefix("zh-TW") || preferred.hasPrefix("zh-HK") || preferred.hasPrefix("zh-MO") { return "zh-Hant" }
+                if preferred.hasPrefix("zh") { return "zh-Hans" }
+                let code = String(preferred.split(separator: "-").first ?? "")
+                if ["en", "es", "fr", "ar", "ru"].contains(code) { return code }
             }
             return "en"
         }

@@ -157,6 +157,7 @@ struct GoalProgressCard: View {
     let onResume: () -> Void
     let onReview: (Set<UUID>) -> Void
     let onRetrySave: () -> Void
+    var onOpenResult: () -> Void = {}
     @State private var expanded = false
     @State private var passed: Set<UUID> = []
     var body: some View {
@@ -179,6 +180,11 @@ struct GoalProgressCard: View {
             if expanded {
                 Text(goal.definition.objective).font(.callout).textSelection(.enabled)
                 if let progress = goal.progress { Text(progress.summary).font(.caption).textSelection(.enabled) }
+                if let progress = goal.progress, !progress.nextActions.isEmpty {
+                    ForEach(Array(progress.nextActions.enumerated()), id: \.offset) { _, action in
+                        Text(action).font(.caption).textSelection(.enabled)
+                    }
+                }
                 ForEach(goal.definition.criteria) { criterion in
                     if criterion.kind == .manual && !busy && !goal.status.isTerminal && goal.latestRunID != nil && !savePending {
                         Toggle(criterion.text, isOn: Binding(get: { passed.contains(criterion.id) }, set: {
@@ -191,23 +197,30 @@ struct GoalProgressCard: View {
                     }
                 }
             }
-            HStack {
-                if savePending { Button(L.string("goal.retry_save"), action: onRetrySave) }
-                else if !goal.status.isTerminal {
-                    if busy { Button(L.string("goal.pause"), action: onPause) }
-                    else {
-                        Button(L.string("goal.resume"), action: onResume)
-                        if expanded && goal.latestRunID != nil {
-                            Button(L.string("goal.review")) { onReview(passed) }
-                        }
-                    }
-                    Button(L.string("goal.cancel"), role: .destructive, action: onCancel)
-                }
+            ViewThatFits(in: .horizontal) {
+                HStack { actions }
+                VStack(alignment: .leading, spacing: 8) { actions }
             }.controlSize(.small)
         }.padding(12).background(Color.accentColor.opacity(0.06))
             .onChange(of: goal.revision, initial: true) { _, _ in
                 passed = Set(goal.definition.criteria.filter { $0.kind == .manual && $0.verdict == .passed }.map(\.id))
+                if goal.status == .awaitingReview { expanded = true }
             }
+    }
+
+    @ViewBuilder private var actions: some View {
+        if savePending { Button(L.string("goal.retry_save"), action: onRetrySave) }
+        else if !goal.status.isTerminal {
+            if busy { Button(L.string("goal.pause"), action: onPause) }
+            else {
+                if expanded && goal.latestRunID != nil {
+                    Button(L.string("goal.review")) { onReview(passed) }.buttonStyle(.borderedProminent)
+                }
+                Button(L.string("goal.resume"), action: onResume)
+            }
+            Button(L.string("goal.cancel"), role: .destructive, action: onCancel)
+        }
+        if goal.latestRunID != nil { Button(L.string("goal.result"), action: onOpenResult) }
     }
 }
 

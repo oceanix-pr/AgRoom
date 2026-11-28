@@ -6,7 +6,7 @@ import AgRoomCore
 /// 帮助页：快速开始、功能导览、快捷键、隐私与数据、常见问题。
 ///
 /// 内容只描述已实现的能力（依据各功能页与 Core 的既有实现撰写），
-/// 文案全部走三语本地化；模型提示词不参与本地化。
+/// 文案覆盖全部受支持语言；模型提示词不参与本地化。
 public struct HelpView: View {
     public init(hub: Hub) {}
 
@@ -16,12 +16,13 @@ public struct HelpView: View {
 }
 
 enum HelpCategory: String, CaseIterable {
-    case quickstart, tour, shortcuts, privacy, faq
+    case firstUse, quickstart, tour, shortcuts, privacy, faq
 
     var titleKey: String { "help." + rawValue }
 
     var symbol: String {
         switch self {
+        case .firstUse: "checklist"
         case .quickstart: "sparkles"
         case .tour: "map"
         case .shortcuts: "keyboard"
@@ -37,7 +38,7 @@ struct HelpContentView: View {
     @State private var category: HelpCategory
     let onOpen: (HubNavItem) -> Void
 
-    init(initialCategory: HelpCategory = .quickstart, onOpen: @escaping (HubNavItem) -> Void) {
+    init(initialCategory: HelpCategory = .firstUse, onOpen: @escaping (HubNavItem) -> Void) {
         _category = State(initialValue: initialCategory)
         self.onOpen = onOpen
     }
@@ -71,6 +72,10 @@ struct HelpContentView: View {
         Step(titleKey: "help.quickstart.4.title", descKey: "help.quickstart.4.desc", usesDispatcher: false)
     ]
 
+    private static let firstUseSteps: [Step] = (1...6).map {
+        Step(titleKey: "help.firstUse.\($0).title", descKey: "help.firstUse.\($0).desc", usesDispatcher: false)
+    }
+
     private static let shortcuts: [Shortcut] = [
         Shortcut(keys: "⌘,", descKey: "help.shortcut.settings"),
         Shortcut(keys: "⌥⌘S", descKey: "help.shortcut.sidebar"),
@@ -97,7 +102,12 @@ struct HelpContentView: View {
         FAQ(titleKey: "help.faq.model.title", descKey: "help.faq.model.desc"),
         FAQ(titleKey: "help.faq.files.title", descKey: "help.faq.files.desc"),
         FAQ(titleKey: "help.faq.skills.title", descKey: "help.faq.skills.desc"),
-        FAQ(titleKey: "help.faq.data.title", descKey: "help.faq.data.desc")
+        FAQ(titleKey: "help.faq.data.title", descKey: "help.faq.data.desc"),
+        FAQ(titleKey: "help.faq.citations.title", descKey: "help.faq.citations.desc"),
+        FAQ(titleKey: "help.faq.retry.title", descKey: "help.faq.retry.desc"),
+        FAQ(titleKey: "help.faq.todos.title", descKey: "help.faq.todos.desc"),
+        FAQ(titleKey: "help.faq.goal.title", descKey: "help.faq.goal.desc"),
+        FAQ(titleKey: "help.faq.schedule.title", descKey: "help.faq.schedule.desc")
     ]
 
     var body: some View {
@@ -129,7 +139,8 @@ struct HelpContentView: View {
                     Button { category = item } label: {
                         Label(L.string(item.titleKey), systemImage: item.symbol)
                             .font(.body)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 11)
@@ -145,7 +156,7 @@ struct HelpContentView: View {
             }
             .padding(12)
         }
-        .frame(width: LanguageManager.shared.activeLanguageCode == "en" ? 230 : 180)
+        .frame(width: LanguageManager.shared.usesCompactLabels ? 180 : 250)
         .background(Color(nsColor: .controlBackgroundColor))
         .accessibilityLabel(L.string("help.categories"))
     }
@@ -153,6 +164,15 @@ struct HelpContentView: View {
     private var selectedContent: some View {
         Form {
             switch category {
+            case .firstUse:
+                Section {
+                    ForEach(Array(Self.firstUseSteps.enumerated()), id: \.offset) { index, step in
+                        stepRow(step, number: index + 1)
+                    }
+                    Button(L.string("product.setup.title")) {
+                        NotificationCenter.default.post(name: Notification.Name("agroom.product.firstTask"), object: nil)
+                    }.buttonStyle(.borderedProminent)
+                }
             case .quickstart:
                 Section {
                     ForEach(Array(Self.steps.enumerated()), id: \.offset) { index, step in
@@ -204,7 +224,7 @@ struct HelpContentView: View {
 
     private func stepRow(_ step: Step, number: Int) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Text("\(number)")
+            Text(number, format: .number)
                 .font(.system(size: 11, weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
@@ -245,7 +265,7 @@ struct HelpContentView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
+            Image(systemName: "chevron.forward")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.tertiary)
         }
@@ -257,6 +277,7 @@ struct HelpContentView: View {
         HStack(spacing: 10) {
             Text(shortcut.keys)
                 .font(.system(size: 11, design: .monospaced))
+                .environment(\.layoutDirection, .leftToRight)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(RoundedRectangle(cornerRadius: 4).fill(Color.secondary.opacity(0.12)))

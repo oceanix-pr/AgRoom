@@ -439,6 +439,7 @@ public struct SkillGenerator: Sendable {
         skillName: String,
         currentSKILLMD: String,
         fileList: [String],
+        resourceContent: String = "",
         instruction: String,
         knowledgeContext: String?,
         usageFeedback: String? = nil,
@@ -446,7 +447,7 @@ public struct SkillGenerator: Sendable {
     ) async throws -> GeneratedSkillPackage {
         let system = """
         You rewrite an existing Agent Skill (Anthropic SKILL.md format) in place.
-        You are given the current SKILL.md, the skill folder's file list, the user's improvement instruction, and optional design reasoning.
+        You are given the current SKILL.md, the skill folder's file list and resource contents, the user's improvement instruction, and optional design reasoning.
         Output ONE JSON object with exactly these fields:
         - "name": MUST be exactly "\(skillName)" (in-place rewrite)
         - "alias": short display name, 2-16 chars, ANY language (Chinese preferred when the instruction is in Chinese); refine the existing alias if the SKILL.md has one, otherwise summarize one
@@ -454,7 +455,7 @@ public struct SkillGenerator: Sendable {
         - "allowed_tools": comma-separated tool names, ONLY from the available tools list below; always include skill_run_script when scripts exist
         - "content": the rewritten markdown instructions; concrete, actionable, step-by-step; the ENTIRE SKILL.md body must stay within ~1000 tokens (≈2500 chars) — push details (examples, templates, specs, lookup tables, checklists) into "references" instead, never duplicating them in the body
         - "scripts": optional array of {"path": "scripts/<file>.py", "content": "..."} — the FULL set of scripts the skill should have after rewriting (existing scripts are replaced); stdlib only; each under 200 lines; put outputs under scratch/
-        - "references": optional array of {"path": "references/<file>.md|.txt|.json|.csv", "content": "..."} — the FULL set of reference docs after rewriting. Preserve existing reference content (from the file list) unless the instruction says otherwise; add depth where useful; keep each under 4000 chars. Use references generously so SKILL.md stays small (≤ ~1000 tokens).
+        - "references": optional array of {"path": "references/<file>.md|.txt|.json|.csv", "content": "..."} — the FULL set of reference docs after rewriting. Preserve the supplied reference contents unless the instruction says otherwise; add depth where useful; keep each under 4000 chars. Use references generously so SKILL.md stays small (≤ ~1000 tokens).
         - "variables": optional array of placeholder names that appear in "content" as {{name}}; preserve existing ones; the agent fills them from conversation context at runtime.
 
         Available built-in tools:
@@ -476,6 +477,9 @@ public struct SkillGenerator: Sendable {
 
         Files in the skill folder:
         \(fileList.isEmpty ? "(none)" : fileList.joined(separator: "\n"))
+
+        Existing resource contents:
+        \(resourceContent)
         """
         if let knowledgeContext, !knowledgeContext.isEmpty {
             userText += "\n\nKnowledge base excerpts (domain facts; reflect them in the skill):\n\(knowledgeContext)"

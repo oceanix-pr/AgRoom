@@ -200,6 +200,7 @@ public enum EngineAssembly {
         inputArtifactVersionIDs: [UUID] = [],
         goalProgress: GoalProgressState? = nil,
         goalScope: GoalScope? = nil,
+        teamRetryScope: TeamRetryScope? = nil,
         restoredIntentToolNames: Set<String>? = nil,
         restoredCodingTaskActive: Bool = false,
         intentClassifier: (any IntentClassifying)? = nil
@@ -328,6 +329,11 @@ public enum EngineAssembly {
             ? (WorkspaceRegistry.shared.defaultWorkspace(for: space)?.path ?? FileAreaService.standard.defaultChatRoot(for: space).path)
             : settings.workspacePath
         let registeredWorkspace = try WorkspaceRegistry.shared.requireAccess(to: requestedPath, in: space, workspaceID: workspaceID)
+        if let teamRetryScope {
+            guard teamRetryScope.matches(registeredWorkspace), settings.resourceContext == teamRetryScope.resourceContext else {
+                throw TeamError.retryUnavailable
+            }
+        }
         if let goalScope {
             guard goalScope.resourceContext.space == space, goalScope.resourceContext.workspaceID == registeredWorkspace.id,
                   goalScope.permissionMode == settings.permissionMode,
@@ -566,7 +572,9 @@ public enum EngineAssembly {
             repository: repository,
             codingTask: codingTask,
             extraTools: extraTools,
-            resourceContext: resourceContext
+            resourceContext: resourceContext,
+            teamRetryScope: TeamRetryScope(resourceContext: resourceContext, workspaceName: registeredWorkspace.name,
+                directories: try registeredWorkspace.folderURLs.map(TaskDirectoryIdentity.capture))
         )
         if settings.chatMode == .coding && !settings.automaticWorkflow {
             // Preserve the tool face of legacy explicit-mode runs. Automatic turns retain
@@ -972,11 +980,14 @@ public enum EngineAssembly {
         space: AppSpace,
         plan: TeamPlan,
         parentTaskID: UUID,
-        workspacePath: String,
+        workspacePath _: String,
         permissionMode: PermissionMode = .readOnly,
         revisionTitle: String? = nil
     ) async throws -> TeamTaskReport {
         guard let queue = spaceStore.queue(for: space) else { throw LLMError.providerUnavailable }
+        guard let scope = plan.retryScope, scope.resourceContext.space == space,
+              let workspace = WorkspaceRegistry.shared.workspaces(for: space).first(where: { $0.id == scope.resourceContext.workspaceID }),
+              scope.matches(workspace) else { throw TeamError.retryUnavailable }
         let preferences = ProductPreferencesService(databaseQueue: queue)
         var settings = DaemonRunSettings(
             maxTokens: DispatcherSettings.maxTokens,
@@ -986,19 +997,22 @@ public enum EngineAssembly {
             replyLanguageInstruction: "",
             personaInstruction: nil,
             dispatcherName: DispatcherSettings.dispatcherPromptName,
-            workspacePath: workspacePath,
+            workspacePath: workspace.path,
             autoReviewEnabled: false,
             permissionMode: permissionMode,
             teamTasksEnabled: true,
             teamWritesEnabled: false
         )
+        settings.resourceContext = scope.resourceContext
         settings.taskBudget = try await preferences.load(ProductTaskBudget.self, key: "task-budget")?.checkpoint()
         let engine = try await build(
             spaceStore: spaceStore,
             space: space,
             settings: settings,
             allowsWorkspaceAutoApproval: false,
-            allowsTeamWrites: false
+            allowsTeamWrites: false,
+            workspaceID: workspace.id,
+            teamRetryScope: scope
         )
         guard let tool = engine.teamRunTool else {
             throw TeamError.workerUnavailable(

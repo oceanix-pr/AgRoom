@@ -173,9 +173,25 @@ final class FirstTaskSetupModel {
 
     func selectFiles(_ urls: [URL]) {
         guard visible, isCurrentSpace() else { return }
-        files = urls
-        sourceNames = urls.map(\.lastPathComponent)
+        var selected = Set(files.map { $0.standardizedFileURL })
+        files += urls.filter { selected.insert($0.standardizedFileURL).inserted }
+        sourceNames = files.map(\.lastPathComponent)
         persistChanges()
+    }
+
+    func removeFile(at index: Int) {
+        guard visible, isCurrentSpace(), sourceNames.indices.contains(index) else { return }
+        if files.indices.contains(index) { files.remove(at: index) }
+        sourceNames.remove(at: index)
+        persistChanges()
+    }
+
+    func saveForNavigation() async -> Bool {
+        guard isLoaded, visible, isCurrentSpace(), !starting else { return false }
+        starting = true
+        defer { starting = false }
+        persistChanges()
+        return await saveTask?.value == true && visible && isCurrentSpace() && !Task.isCancelled
     }
 
     func refreshMailSources() async {

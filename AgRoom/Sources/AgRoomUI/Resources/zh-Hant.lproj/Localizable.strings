@@ -1745,19 +1745,19 @@
 "help.open_settings" = "開啟設定";
 "help.quickstart" = "快速開始";
 "help.quickstart.1.title" = "接入模型服務";
-"help.quickstart.1.desc" = "在「設定 → 模型服務」裡新增提供者與 API Key。未設定模型前無法取得回答。";
+"help.quickstart.1.desc" = "在「設定 → 模型服務」加入並啟用提供商，再測試端點、模型和 API Key。";
 "help.quickstart.2.title" = "選擇空間";
 "help.quickstart.2.desc" = "生活空間與工作空間各自獨立儲存。在側欄頂部切換：對話、檔案、技能與記憶互不混用。";
 "help.quickstart.3.title" = "與 %@ 對話";
-"help.quickstart.3.desc" = "%@ 理解你的意圖，並把任務分派給子智體與內建工具。涉及風險的工具呼叫會在對話中暫停，等待你確認。";
+"help.quickstart.3.desc" = "向 %@ 描述任務。執行過程中可以檢視工具進度，並在確認卡中核對操作。";
 "help.quickstart.4.title" = "用技能擴充能力";
 "help.quickstart.4.desc" = "技能是按需載入的 SKILL.md 技能包。可以匯入現成技能包，也可以直接在對話裡描述需求，讓 Agent 起草。";
 "help.tour" = "功能導覽";
-"help.tour.chat" = "與主調度器對話，預覽圖片、播放影片和音訊附件，並在軌跡面板檢視工具呼叫。";
+"help.tour.chat" = "描述任務、設定目標、檢視工具進度和成果版本。知識引用可開啟隨回答儲存的原文摘錄。";
 "help.tour.mail" = "三欄信箱：信箱與資料夾、郵件清單、郵件詳情。撰寫與回覆在獨立視窗完成。";
 "help.tour.agents" = "設定可委派的專長智體與協作工作者，獨立選擇提供商、模型、人設和技能。";
-"help.tour.team" = "多智體協作任務板：計畫、子任務、驗證結論與產物，並提供團隊寫檔的審批收件匣。";
-"help.tour.scheduled" = "定時 Agent 任務：觸發規則、下次執行、指令與執行紀錄。";
+"help.tour.team" = "檢視計畫、子任務、驗證結論和檔案變更。唯讀任務重試沿用已記錄的原工作區。";
+"help.tour.scheduled" = "在阿吉屋執行期間執行唯讀排程任務。檢視觸發規則、下次執行、錯過與略過的記錄、結果和後續處理。";
 "help.tour.tools" = "SKILL.md 格式的技能包：匯入、編輯、啟用與匯出。";
 "help.tour.files" = "管理目前空間的檔案與資料夾，支援預覽、複製、匯入和匯出。";
 "help.tour.knowledge" = "分庫、資料夾與文件管理，支援全文搜尋、檔案匯入與 AI 生成知識。";
@@ -3960,7 +3960,7 @@
 "mail.import.mapping.duplicateHint" = "重複郵件保留在目前位置；變更對應不會移動以前匯入的郵件。";
 "mail.import.mapping.edit" = "調整資料夾對應";
 "mail.import.phase.scanning" = "正在掃描：已發現 %d 個檔案";
-"mail.import.phase.parsing" = "正在解析：共 %d 個檔案，已處理 %d 個，識別 %d 封郵件";
+"mail.import.phase.parsing" = "正在解析：共 %1$d 個檔案，已處理 %2$d 個，識別 %3$d 封郵件";
 "mail.import.phase.writing" = "正在寫入：已處理 %d / %d 封郵件";
 "mail.import.failureGroups" = "依失敗原因檢視";
 "mail.import.failureGroup" = "%d 項 · %@";
@@ -4143,7 +4143,7 @@
 
 // Notes
 "nav.notes" = "筆記";
-"help.tour.notes" = "文字、會議錄音、轉錄、摘要與待辦。";
+"help.tour.notes" = "錄製、轉寫和摘要筆記，擷取待辦，並核對來源證據與截止日期。";
 "notes.new" = "新增";
 "notes.archived" = "封存";
 "notes.more" = "載入更多";
@@ -4676,3 +4676,35 @@
 "browser.sleep" = "休眠分頁";
 "browser.sleep.warning" = "休眠會關閉網頁，捨棄未儲存的表單和瀏覽記錄。喚醒時會重新開啟此位址。";
 "browser.wake" = "喚醒分頁";
+
+"product.knowledge.snapshot" = "本次回答儲存的原文摘錄";
+"product.knowledge.current" = "檢視目前文件";
+"goal.result" = "檢視本段成果";
+"team.retry.workspace" = "工作區：%@";
+"team.retry.legacy" = "請回到原對話，使用該專案的資料重新執行。";
+"skills.error.resources_too_large" = "技能資源超過重寫的內容上限。請在技能編輯器中修改相關檔案。";
+"help.firstUse" = "首次使用指引";
+"help.firstUse.1.title" = "選擇生活或工作空間";
+"help.firstUse.1.desc" = "在側欄頂部選擇空間。接下來建立的對話、知識、筆記和技能儲存在所選空間。";
+"help.firstUse.2.title" = "接入並測試模型";
+"help.firstUse.2.desc" = "開啟「設定 → 模型服務」，填寫服務端點、模型 ID 和 API Key，啟用提供商，再測試連線。連線成功後即可開始首次任務。";
+"help.firstUse.3.title" = "準備一份簡單資料";
+"help.firstUse.3.desc" = "首次任務可以選用範例，也可以加入一份短文字檔案。資料比較至少選擇兩份檔案，可以分次從不同資料夾加入。";
+"help.firstUse.4.title" = "執行任務並核對操作";
+"help.firstUse.4.desc" = "選擇資料整理、資料比較或郵件摘要，核對模型與來源後開始。遇到操作確認時，先檢視目標和擬修改內容，再決定是否批准。";
+"help.firstUse.5.title" = "開啟並檢查首份成果";
+"help.firstUse.5.desc" = "從成果卡開啟報告，對照原資料檢查內容，再完成首次成果確認。成果卡也提供匯出和繼續修改。";
+"help.firstUse.6.title" = "回看任務和資料";
+"help.firstUse.6.desc" = "在任務中心回看執行記錄，在成果庫重新開啟報告，按 ⌘K 搜尋目前空間。首次選擇郵件摘要時，依指引設定並同步信箱，郵件準備好後會回到任務指引。";
+"help.faq.citations.title" = "如何核對回答引用的知識？";
+"help.faq.citations.desc" = "展開回答下方的「知識來源」，開啟引用片段。新回答保留作答時的摘錄，「檢視目前文件」可對照最新正文。";
+"help.faq.retry.title" = "協作重試使用哪個專案？";
+"help.faq.retry.desc" = "重試確認中顯示原工作區，執行沿用記錄的資料夾和知識範圍。較早任務缺少專案記錄時，請回到原對話重新執行。";
+"help.faq.todos.title" = "再次擷取待辦會怎樣？";
+"help.faq.todos.desc" = "符合的既有事項保留編輯內容、完成狀態和提醒關聯。相對日期按已記錄的錄製日期計算；來源日期不明時保留原話供核對。";
+"help.faq.goal.title" = "如何驗收目標成果？";
+"help.faq.goal.desc" = "進入「待驗收」後，目標卡展開驗收清單。開啟本段成果，勾選已核對的標準，再儲存逐項驗收。「核對後繼續」會啟動下一段執行。";
+"help.faq.schedule.title" = "如何理解排程任務狀態？";
+"help.faq.schedule.desc" = "「已錯過」表示已超過補跑時段，「已略過」表示上一輪仍在執行，「已取消」表示收到了停止請求，「失敗」表示執行出現錯誤。排程任務需要保持阿吉屋執行。";
+
+"product.setup.sources.remove" = "移除此資料";

@@ -338,7 +338,7 @@ struct TaskCenterPanel: View {
             HStack {
                 Text(item.title.isEmpty ? L.string("chat.new") : item.title).font(.headline).lineLimit(2)
                 Spacer()
-                Label(jobState?.taskCenterLabel ?? item.status.label, systemImage: item.status.icon).font(.caption)
+                Label(item.source == .scheduled ? L.string("scheduled.status." + item.sourceStatus) : (jobState?.taskCenterLabel ?? item.status.label), systemImage: item.status.icon).font(.caption)
                     .foregroundStyle(item.status.taskGroup == .attention ? .orange : .secondary)
             }
             HStack {

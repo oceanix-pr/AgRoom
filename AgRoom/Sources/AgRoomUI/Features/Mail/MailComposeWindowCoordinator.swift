@@ -121,7 +121,7 @@ final class MailComposeWindowCoordinator: NSObject, NSWindowDelegate {
             defer: false
         )
         window.identifier = AgRoomWindowIdentifier.mailCompose
-        window.title = Self.windowTitle(for: draft, attribution: viewModel.attribution)
+        window.title = Self.windowTitle(kind: draft.composeKind, subject: draft.subject, attribution: viewModel.attribution)
         window.minSize = NSSize(width: 640, height: 480)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
@@ -149,15 +149,22 @@ final class MailComposeWindowCoordinator: NSObject, NSWindowDelegate {
         "\(space.rawValue)|\(draftID.uuidString)"
     }
 
-    private static func windowTitle(for draft: MailDraft, attribution: String) -> String {
+    func refreshTitles() {
+        for entry in entries.values {
+            entry.window.title = Self.windowTitle(kind: entry.viewModel.composeKind, subject: entry.viewModel.subject,
+                                                 attribution: entry.viewModel.attribution)
+        }
+    }
+
+    private static func windowTitle(kind: MailComposeKind, subject: String, attribution: String) -> String {
         let key: String
-        switch draft.composeKind {
+        switch kind {
         case .new: key = "mail.compose.title"
         case .reply: key = "mail.compose.title.reply"
         case .forward: key = "mail.compose.title.forward"
         }
         let title = L.string(key)
-        return draft.subject.isEmpty ? "\(title) — \(attribution)" : "\(title): \(draft.subject)"
+        return subject.isEmpty ? "\(title) — \(attribution)" : "\(title): \(subject)"
     }
 
     // MARK: - Maximize

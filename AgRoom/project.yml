@@ -67,7 +67,7 @@ targets:
           - EmbeddingRuntime
       - Resources/PrivacyInfo.xcprivacy
       - Resources/Assets.xcassets
-      # 三语应用显示名（Dock / 菜单栏 / 关于面板 / 窗口标题）：简体与繁体中文为「阿吉屋」，其他语言为 AgRoom。
+      # 应用支持语言的显示名（Dock / 菜单栏 / 关于面板 / 窗口标题）：简体与繁体中文为「阿吉屋」，其他语言为 AgRoom。
       - path: Resources/Localized
       # 复制与签名交给 Xcode 原生构建阶段，避免脚本沙盒把目录输出当作单个文件授权。
       - path: Sources/AgRoom/EmbeddingRuntime/arm64

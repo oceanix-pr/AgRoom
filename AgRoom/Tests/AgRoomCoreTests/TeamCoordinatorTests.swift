@@ -531,6 +531,18 @@ struct TeamToolRegistrationTests {
 
 @Suite("TeamRunTool contracts")
 struct TeamRunToolContractTests {
+    @Test("A foreign retry scope is rejected before workers or task persistence")
+    func foreignRetryScope() async throws {
+        let scope = TeamRetryScope(resourceContext: .init(space: .personal, workspaceID: UUID()),
+                                   workspaceName: "Private", directories: [])
+        let factory = FakeFactory(results: [:], delays: [:], recorder: nil)
+        let tool = TeamRunTool(factory: factory, space: .work, retryScope: scope)
+        let plan = TeamPlan(goal: "Read", acceptance: [], subtasks: [.init(title: "Read", objective: "Read")])
+        await #expect(throws: WorkspaceProjectError.wrongWorkspace) {
+            try await tool.run(plan: plan, parentTaskID: nil)
+        }
+    }
+
     @Test("team_run is read-only and never asks for confirmation")
     func toolIsReadOnly() {
         let factory = FakeFactory(results: [:], delays: [:], recorder: nil)

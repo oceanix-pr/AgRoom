@@ -7,13 +7,15 @@ import AgRoomCore
 struct OnboardingView: View {
     let hub: Hub
     let onFinish: (FirstTaskRequest?) -> Void
+    var onConfigureMail: (() -> Void)?
     @State private var setup: FirstTaskSetupModel
     @State private var showingProvider = false
     @State private var sourcePanel: NSOpenPanel?
 
-    init(hub: Hub, onFinish: @escaping (FirstTaskRequest?) -> Void) {
+    init(hub: Hub, onFinish: @escaping (FirstTaskRequest?) -> Void, onConfigureMail: (() -> Void)? = nil) {
         self.hub = hub
         self.onFinish = onFinish
+        self.onConfigureMail = onConfigureMail
         self._setup = State(initialValue: FirstTaskSetupModel(hub: hub, space: hub.spaceStore.current))
     }
 
@@ -37,7 +39,7 @@ struct OnboardingView: View {
                                 ForEach(["organize", "compare", "mail"], id: \.self) { value in
                                     Text(L.string("product.template.\(value).title")).tag(value)
                                 }
-                            }.pickerStyle(.segmented)
+                            }.pickerStyle(.segmented).labelsHidden()
                             Text(L.string("product.template.\(setup.template).description")).font(.callout)
                             Label(L.string("product.setup.output"), systemImage: "doc.badge.checkmark").font(.caption)
                         }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
@@ -72,15 +74,22 @@ struct OnboardingView: View {
                                 HStack {
                                     Button(L.string("common.refresh")) { Task { await setup.refreshMailSources() } }.disabled(setup.loadingMail)
                                     Button(L.string("product.setup.mail.configure")) {
-                                        onFinish(nil)
-                                        ProductRoute.open(space: setup.space, page: "mail")
-                                    }
+                                        Task { if await setup.saveForNavigation() { onConfigureMail?() } }
+                                    }.disabled(!setup.isLoaded || setup.starting)
                                 }
                             } else {
                                 Toggle(L.string("product.setup.sample"), isOn: $setup.useSample)
                                 if !setup.useSample {
                                     Button(L.string("chat.attach.add")) { selectFiles() }.disabled(sourcePanel != nil)
-                                    ForEach(Array(setup.sourceNames.enumerated()), id: \.offset) { _, name in Text(name).font(.caption) }
+                                    ForEach(Array(setup.sourceNames.enumerated()), id: \.offset) { index, name in
+                                        HStack {
+                                            Text(name).font(.caption)
+                                                .help(setup.files.indices.contains(index) ? setup.files[index].path : name)
+                                            Spacer()
+                                            Button { setup.removeFile(at: index) } label: { Image(systemName: "xmark.circle") }
+                                                .buttonStyle(.plain).accessibilityLabel(L.string("product.setup.sources.remove"))
+                                        }
+                                    }
                                     if setup.needsSourceReselection { Text(L.string("product.setup.sources.reselect")).font(.caption).foregroundStyle(.orange) }
                                     else if !setup.sourcesReady { Text(L.string("product.setup.sources.required")).font(.caption).foregroundStyle(.orange) }
                                 }

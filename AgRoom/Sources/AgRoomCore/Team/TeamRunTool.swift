@@ -17,6 +17,7 @@ public struct TeamRunTool: DispatcherTool {
     public let space: AppSpace
     /// 显式重试时指向原任务；首次运行 nil。
     public let parentTaskID: UUID?
+    public let retryScope: TeamRetryScope?
     let parentBudget = AgentBudgetRelay()
     let executionContext = AgentExecutionContextRelay()
 
@@ -28,7 +29,8 @@ public struct TeamRunTool: DispatcherTool {
         maxSubtasks: Int = TeamPlanValidator.maximumSubtasks,
         allowsWrites: Bool = false,
         space: AppSpace = .work,
-        parentTaskID: UUID? = nil
+        parentTaskID: UUID? = nil,
+        retryScope: TeamRetryScope? = nil
     ) {
         self.factory = factory
         self.store = store
@@ -38,6 +40,7 @@ public struct TeamRunTool: DispatcherTool {
         self.allowsWrites = allowsWrites
         self.space = space
         self.parentTaskID = parentTaskID
+        self.retryScope = retryScope
     }
 
     public var definition: ToolDefinition {
@@ -80,7 +83,13 @@ public struct TeamRunTool: DispatcherTool {
 
     /// 直接以已校验的计划运行（任务板显式重试复用同一装配）。
     /// 每次调用生成新的 taskID/runID，并通过 parentTaskID 关联原任务。
-    public func run(plan: TeamPlan, parentTaskID: UUID?) async throws -> TeamTaskReport {
+    public func run(plan originalPlan: TeamPlan, parentTaskID: UUID?) async throws -> TeamTaskReport {
+        var scopedPlan = originalPlan
+        scopedPlan.retryScope = retryScope ?? scopedPlan.retryScope
+        let plan = scopedPlan
+        if let scope = plan.retryScope, scope.resourceContext.space != space || !scope.resourceContext.isValid {
+            throw WorkspaceProjectError.wrongWorkspace
+        }
         if let context = executionContext.value, context.space != space {
             throw WorkspaceProjectError.wrongWorkspace
         }

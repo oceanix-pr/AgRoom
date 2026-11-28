@@ -9,6 +9,10 @@ public enum AppLanguage: String, CaseIterable, Sendable {
     case english = "en"
     case simplifiedChinese = "zh-Hans"
     case traditionalChinese = "zh-Hant"
+    case spanish = "es"
+    case french = "fr"
+    case arabic = "ar"
+    case russian = "ru"
 
     public var nativeDisplayName: String {
         switch self {
@@ -16,6 +20,10 @@ public enum AppLanguage: String, CaseIterable, Sendable {
         case .english: return "English"
         case .simplifiedChinese: return "简体中文"
         case .traditionalChinese: return "繁體中文"
+        case .spanish: return "Español"
+        case .french: return "Français"
+        case .arabic: return "العربية"
+        case .russian: return "Русский"
         }
     }
 
@@ -24,18 +32,25 @@ public enum AppLanguage: String, CaseIterable, Sendable {
     public var agentReplyLanguageName: String {
         switch self {
         case .system:
-            let preferred = Locale.preferredLanguages.first ?? "en"
-            if preferred.hasPrefix("zh-Hant") || preferred.hasPrefix("zh-TW") || preferred.hasPrefix("zh-HK") {
-                return "Traditional Chinese"
-            }
-            if preferred.hasPrefix("zh") {
-                return "Simplified Chinese"
-            }
-            return "English"
+            return Self.resolved(preferredLanguages: Locale.preferredLanguages).agentReplyLanguageName
         case .english: return "English"
         case .simplifiedChinese: return "Simplified Chinese"
         case .traditionalChinese: return "Traditional Chinese"
+        case .spanish: return "Spanish"
+        case .french: return "French"
+        case .arabic: return "Arabic"
+        case .russian: return "Russian"
         }
+    }
+
+    public static func resolved(preferredLanguages: [String]) -> AppLanguage {
+        for language in preferredLanguages {
+            let code = language.replacingOccurrences(of: "_", with: "-")
+            if code.hasPrefix("zh-Hant") || code.hasPrefix("zh-TW") || code.hasPrefix("zh-HK") || code.hasPrefix("zh-MO") { return .traditionalChinese }
+            if code.hasPrefix("zh") { return .simplifiedChinese }
+            if let value = AppLanguage(rawValue: String(code.split(separator: "-").first ?? "")), value != .system { return value }
+        }
+        return .english
     }
 }
 
@@ -69,14 +84,7 @@ public final class LanguageManager {
     public var activeLanguageCode: String {
         switch currentLanguage {
         case .system:
-            let preferred = Locale.preferredLanguages.first ?? "en"
-            if preferred.hasPrefix("zh-Hant") || preferred.hasPrefix("zh-TW") || preferred.hasPrefix("zh-HK") {
-                return "zh-Hant"
-            }
-            if preferred.hasPrefix("zh") {
-                return "zh-Hans"
-            }
-            return "en"
+            return AppLanguage.resolved(preferredLanguages: Locale.preferredLanguages).rawValue
         default:
             return currentLanguage.rawValue
         }
@@ -84,17 +92,16 @@ public final class LanguageManager {
 
     /// 实际生效语言的英文名：供模型提示使用（会话标题等生成内容应随应用语言设置）
     public var activeLanguageName: String {
-        switch activeLanguageCode {
-        case "zh-Hans": return "Simplified Chinese"
-        case "zh-Hant": return "Traditional Chinese"
-        default: return "English"
-        }
+        (AppLanguage(rawValue: activeLanguageCode) ?? .english).agentReplyLanguageName
     }
+
+    public var usesCompactLabels: Bool { activeLanguageCode.hasPrefix("zh") }
+    public var layoutDirection: LayoutDirection { activeLanguageCode == "ar" ? .rightToLeft : .leftToRight }
 }
 
 // MARK: - L
 
-/// 本地化辅助：统一管理三语字符串
+/// 本地化辅助：统一管理受支持语言的字符串
 public enum L {
     /// 团队旧快照以英文字符串保存错误；展示时也应用当前语言。
     @MainActor

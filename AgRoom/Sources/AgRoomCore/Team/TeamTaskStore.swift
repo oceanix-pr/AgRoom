@@ -260,6 +260,7 @@ public final class TeamTaskStore: @unchecked Sendable {
                                  estimatedTokens: source.plan.subtasks.map(\.estimatedTokens).max() ?? 0)
         var plan = TeamPlan(goal: source.plan.goal, acceptance: source.plan.acceptance,
                             subtasks: [editor], maxConcurrency: 1)
+        plan.retryScope = source.plan.retryScope
         plan.revision = TeamRevision(reviewSummary: review.summary, issues: review.issues,
                                      material: TeamReviewMaterial(subtasks: report.subtasks, artifacts: report.artifacts),
                                      openQuestions: report.openQuestions)

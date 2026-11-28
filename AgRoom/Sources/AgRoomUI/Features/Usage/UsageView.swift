@@ -37,7 +37,7 @@ struct UsageCategoryList: View {
                 }
             }.padding(12)
         }
-        .frame(width: LanguageManager.shared.activeLanguageCode == "en" ? 230 : 180)
+        .frame(width: LanguageManager.shared.usesCompactLabels ? 180 : 250)
         .background(Color(nsColor: .controlBackgroundColor))
         .accessibilityLabel(L.string("usage.categories"))
     }

@@ -192,7 +192,11 @@ public struct NoteWorkflowRunner: Sendable {
                 case .todos:
                     let source = NoteAIProcessing.source(note)
                     let mask = job.settings.redactText == true ? try NotePII.redact(source, terms: job.settings.privateTerms ?? "") : nil
-                    note.todos += try await NoteAIProcessing.extract(mask?.text ?? source, prompt: job.todoPrompt ?? NoteProcessingPreferences.defaultTodoPrompt, generate: generate).map { NoteAIProcessing.restore($0, using: mask) }
+                    let extracted = try await NoteAIProcessing.extract(mask?.text ?? source,
+                        prompt: job.todoPrompt ?? NoteProcessingPreferences.defaultTodoPrompt,
+                        sourceDate: note.sourceDate, timeZone: note.sourceTimeZone.flatMap(TimeZone.init(identifier:)) ?? .current,
+                        generate: generate).map { NoteAIProcessing.restore($0, using: mask) }
+                    note.todos = NoteAIProcessing.merging(extracted, into: note.todos)
                 case .title:
                     let source = String((note.summaries.last?.text ?? note.sourceText).prefix(6000))
                     let mask = job.settings.redactText == true ? try NotePII.redact(source, terms: job.settings.privateTerms ?? "") : nil

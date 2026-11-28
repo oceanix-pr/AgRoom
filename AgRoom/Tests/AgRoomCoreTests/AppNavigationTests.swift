@@ -88,7 +88,7 @@ struct AppNavigationTests {
     func helpLocalizationCoverage() throws {
         let resources = Self.resourcesDirectory
         let expected = Self.helpKeys
-        for language in ["en", "zh-Hans", "zh-Hant"] {
+        for language in AppLanguage.allCases.filter({ $0 != .system }).map(\.rawValue) {
             let url = resources.appendingPathComponent("\(language).lproj/Localizable.strings")
             let contents = try String(contentsOf: url, encoding: .utf8)
             let keys = Self.keys(in: contents)
@@ -99,19 +99,21 @@ struct AppNavigationTests {
         }
     }
 
-    @Test("Help categories render independently in all three languages",
+    @Test("Help categories render independently in all supported languages",
           .enabled(if: ProcessInfo.processInfo.environment["AGROOM_HELP_SNAPSHOT_DIR"] != nil))
     func helpCategoryRendering() async throws {
         let directory = try #require(ProcessInfo.processInfo.environment["AGROOM_HELP_SNAPSHOT_DIR"])
         let oldLanguage = LanguageManager.shared.currentLanguage
         defer { LanguageManager.shared.currentLanguage = oldLanguage }
-        for language in [AppLanguage.simplifiedChinese, .traditionalChinese, .english] {
+        for language in AppLanguage.allCases.filter({ $0 != .system }) {
             LanguageManager.shared.currentLanguage = language
             for category in HelpCategory.allCases {
                 let dark = category == .privacy || category == .shortcuts
-                let width = language == .english ? 1000.0 : 900.0
+                let width = language.rawValue.hasPrefix("zh") ? 900.0 : 1100.0
                 let host = NSHostingView(rootView: HelpContentView(initialCategory: category, onOpen: { _ in })
                     .background(Color(nsColor: .windowBackgroundColor))
+                    .environment(\.layoutDirection, LanguageManager.shared.layoutDirection)
+                    .environment(\.locale, Locale(identifier: language.rawValue))
                     .environment(\.colorScheme, dark ? .dark : .light))
                 let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 950),
                     styleMask: [.borderless], backing: .buffered, defer: false)

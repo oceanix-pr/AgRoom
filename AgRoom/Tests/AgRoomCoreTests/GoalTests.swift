@@ -358,6 +358,10 @@ struct GoalTests {
         let runs = try await hub.makeGoalStore(for: .work)!.attempts(goalID: goal.id)
         #expect(runs.count == 2 && runs[0].id != runs[1].id && runs.allSatisfy { $0.receipt != nil })
         for run in runs { #expect(try await hub.makeTaskRunStore(for: .work)!.run(id: run.id) != nil) }
+        #expect(await model.openGoalResult(goal))
+        let resultMessage = model.session(id: session)?.messages.last { $0.taskRun?.id == goal.latestRunID }
+        #expect(model.sourceMessageFocus?.messageID == resultMessage?.id)
+        #expect(model.inputText == "Unsent draft must survive" && probe.requests.count == 2)
         await model.reviewGoal(goal, passedIDs: Set(goal.definition.criteria.map(\.id)))
         #expect(model.activeGoal?.status == .succeeded && probe.requests.count == 2)
     }
@@ -529,10 +533,13 @@ struct GoalTests {
     @MainActor func nativePresentation() async throws {
         guard let directory = ProcessInfo.processInfo.environment["AGROOM_GOAL_SNAPSHOT_DIR"] else { return }
         _ = NSApplication.shared
-        let queue = try queue(), value = try await goal(queue)
+        let queue = try queue()
+        var value = try await goal(queue)
+        value.status = .awaitingReview
+        value.latestRunID = UUID()
         let oldLanguage = LanguageManager.shared.currentLanguage
         defer { LanguageManager.shared.currentLanguage = oldLanguage }
-        for language in [AppLanguage.simplifiedChinese, .traditionalChinese, .english] {
+        for language in AppLanguage.allCases.filter({ $0 != .system }) {
             LanguageManager.shared.currentLanguage = language
             let context = GoalEditorPresentation(sessionID: value.sessionID,
                 definition: .init(title: "", objective: value.definition.objective, criteria: []))
@@ -541,10 +548,13 @@ struct GoalTests {
                 space: .work, workspaceName: "Goal test workspace", permissionMode: .workspaceWrite) { _ in false }
             let card = GoalProgressCard(goal: value, busy: false, savePending: false, onPause: {}, onCancel: {}, onResume: {}, onReview: { _ in }, onRetrySave: {})
             let composer = GoalComposerNotice(hasAttachments: false, objectiveIsTooLong: false, submitting: false, onCancel: {})
-            for (name, content, height) in [("setup", AnyView(setup), 560.0), ("resume", AnyView(resume), 560.0), ("progress", AnyView(card), 220.0), ("composer", AnyView(composer.padding(16)), 120.0)] {
+            for (name, content, height) in [("setup", AnyView(setup), 560.0), ("resume", AnyView(resume), 560.0), ("progress", AnyView(card), 400.0), ("composer", AnyView(composer.padding(16)), 120.0)] {
                 let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 640, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
                 window.isReleasedWhenClosed = false
-                window.contentView = NSHostingView(rootView: content.background(Color(nsColor: .windowBackgroundColor)))
+                window.contentView = NSHostingView(rootView: content.frame(width: 640, height: height, alignment: .topLeading)
+                    .background(Color(nsColor: .windowBackgroundColor))
+                    .environment(\.layoutDirection, LanguageManager.shared.layoutDirection)
+                    .environment(\.locale, Locale(identifier: language.rawValue)))
                 window.orderFront(nil)
                 try await Task.sleep(for: .milliseconds(100))
                 window.contentView?.layoutSubtreeIfNeeded(); window.displayIfNeeded()

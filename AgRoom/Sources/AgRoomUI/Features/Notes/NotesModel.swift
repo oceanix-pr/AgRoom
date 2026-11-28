@@ -570,6 +570,9 @@ final class NotesModel {
                     try Task.checkCancellation()
                 } catch { _ = await current.stop(); loadCaptureRecovery(); throw error }
                 recording = true
+                draft?.sourceDate = Date()
+                draft?.sourceTimeZone = TimeZone.current.identifier
+                _ = await save()
                 captureMonitor = Task { [weak self] in
                     while !Task.isCancelled {
                         do { try await Task.sleep(for: .seconds(1)) } catch { return }

@@ -14,6 +14,7 @@ public final class SkillStore: @unchecked Sendable {
         case disabled(String)
         case unsafePath
         case unreadableFile
+        case resourceTooLarge
         case protectedFile
         case notScript
 
@@ -25,6 +26,7 @@ public final class SkillStore: @unchecked Sendable {
             case .disabled: return "skills.error.disabled"
             case .unsafePath: return "skills.error.unsafe_path"
             case .unreadableFile: return "skills.error.unreadable_file"
+            case .resourceTooLarge: return "skills.error.resources_too_large"
             case .protectedFile: return "skills.error.protected_file"
             case .notScript: return "skills.error.not_script"
             }
@@ -38,6 +40,7 @@ public final class SkillStore: @unchecked Sendable {
             case .disabled(let name): return "Skill '\(name)' is disabled. Enable it in Skills before using it."
             case .unsafePath: return "The requested file path escapes the skill folder"
             case .unreadableFile: return "The file could not be read as text"
+            case .resourceTooLarge: return "The skill resources exceed the rewrite context size. Edit a smaller set of files."
             case .protectedFile: return "SKILL.md cannot be deleted from a skill folder"
             case .notScript: return "Only .py scripts inside a skill folder can be executed"
             }

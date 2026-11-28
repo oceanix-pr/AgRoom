@@ -14,6 +14,7 @@ public struct NoteTodo: Codable, Sendable, Equatable, Identifiable {
     public var alarmOffsetMinutes: Int?
     public var evidenceQuote: String?
     public var sourceTimestamp: Double?
+    public var datePhrase: String?
     public init(title: String) { self.title = title }
 }
 
@@ -52,6 +53,8 @@ public struct WorkNote: Codable, Sendable, Equatable, Identifiable {
     public var archived = false
     public var pinned = false
     public var createdAt = Date()
+    public var sourceDate: Date?
+    public var sourceTimeZone: String?
     public var updatedAt = Date()
     public init(title: String) { self.title = title }
     public var searchText: String { ([title, text, transcript, visualNotes ?? "", tags] + summaries.map(\.text) + todos.flatMap { [$0.title, $0.owner ?? "", $0.notes ?? "", $0.evidenceQuote ?? ""] }).joined(separator: "\n") }

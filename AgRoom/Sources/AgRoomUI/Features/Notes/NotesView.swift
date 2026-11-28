@@ -389,6 +389,7 @@ struct NotesView: View {
                         if let quote = todo.evidenceQuote { Text(quote).font(.callout).foregroundStyle(.secondary).textSelection(.enabled) }
                         if let seconds = todo.sourceTimestamp { Button(L.string("notes.todo.source")) { model.playSegment(seconds) }.font(.caption) }
                         if let due = todo.dueDate { Text(due, format: .dateTime.month().day().hour().minute()).font(MeetTypography.secondary).foregroundStyle(.orange) }
+                        else if let phrase = todo.datePhrase { Text(phrase).font(MeetTypography.secondary).foregroundStyle(.orange) }
                         HStack {
                             if let owner = todo.owner, !owner.isEmpty { Label(owner, systemImage: "person").font(MeetTypography.secondary).foregroundStyle(.secondary) }
                             Spacer()

@@ -18,6 +18,7 @@ struct MailComposeView: View {
     @State private var presetManager: MailComposePresetManager?
     @State private var checkingRecipients = false
     @State private var formatting = MailBodyFormatControls()
+    @State private var languageManager = LanguageManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,6 +37,9 @@ struct MailComposeView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(minWidth: 640, minHeight: 480)
+        .environment(\.locale, Locale(identifier: languageManager.activeLanguageCode))
+        .environment(\.layoutDirection, languageManager.layoutDirection)
+        .onChange(of: languageManager.version) { _, _ in MailComposeWindowCoordinator.shared.refreshTitles() }
         .task { await viewModel.loadIfNeeded() }
         .task(id: viewModel.fingerprint) { await viewModel.autosaveIfNeeded() }
         .onDisappear { attachmentSelectionID = UUID(); attachmentPanel?.cancel(nil); attachmentPanel = nil }

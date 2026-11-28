@@ -11,7 +11,11 @@ extension NativeAppTemplates {
       "i18n":{
         "en":{"name":"Database Metadata","summary":"Browse MySQL schema using a host-managed connection and export metadata.","connection":"Database connection","tables":"Load tables","describe":"Inspect selected table and export","copy":"Copy summary","fields":"Fields","preview":"Summary"},
         "zh-Hans":{"name":"数据库元数据","summary":"通过宿主管理的连接浏览 MySQL 表结构并导出元数据。","connection":"数据库连接","tables":"加载表列表","describe":"查看所选表并导出","copy":"复制摘要","fields":"字段数","preview":"摘要"},
-        "zh-Hant":{"name":"資料庫中繼資料","summary":"透過宿主管理的連線瀏覽 MySQL 資料表結構並匯出中繼資料。","connection":"資料庫連線","tables":"載入資料表清單","describe":"檢視所選資料表並匯出","copy":"複製摘要","fields":"欄位數","preview":"摘要"}
+        "zh-Hant":{"name":"資料庫中繼資料","summary":"透過宿主管理的連線瀏覽 MySQL 資料表結構並匯出中繼資料。","connection":"資料庫連線","tables":"載入資料表清單","describe":"檢視所選資料表並匯出","copy":"複製摘要","fields":"欄位數","preview":"摘要"},
+        "es":{"name":"Metadatos de la base de datos","summary":"Explora el esquema MySQL mediante una conexión de la aplicación y exporta sus metadatos.","connection":"Conexión a la base de datos","tables":"Cargar tablas","describe":"Inspeccionar y exportar la tabla seleccionada","copy":"Copiar resumen","fields":"Campos","preview":"Resumen"},
+        "fr":{"name":"Métadonnées de la base","summary":"Parcourez le schéma MySQL avec une connexion gérée par l’application et exportez ses métadonnées.","connection":"Connexion à la base","tables":"Charger les tables","describe":"Examiner et exporter la table sélectionnée","copy":"Copier le résumé","fields":"Champs","preview":"Résumé"},
+        "ar":{"name":"بيانات قاعدة البيانات الوصفية","summary":"استعرض بنية MySQL عبر اتصال يديره التطبيق وصدّر بياناتها الوصفية.","connection":"اتصال قاعدة البيانات","tables":"تحميل الجداول","describe":"فحص الجدول المحدد وتصديره","copy":"نسخ الملخص","fields":"الحقول","preview":"الملخص"},
+        "ru":{"name":"Метаданные базы данных","summary":"Просматривайте схему MySQL через подключение приложения и экспортируйте метаданные.","connection":"Подключение к базе","tables":"Загрузить таблицы","describe":"Просмотреть и экспортировать выбранную таблицу","copy":"Копировать сводку","fields":"Поля","preview":"Сводка"}
       },
       "state":{"field-count":{"initial":0,"persistent":false},"preview":{"initial":"","persistent":false}},
       "capabilities":{

@@ -78,7 +78,7 @@ final class MailComposeViewModel {
     let draftID: UUID
     let space: AppSpace
     /// 窗口归属展示（空间 · 账号），写入窗口标题。
-    let attribution: String
+    var attribution: String { "\(L.string(space.nameKey)) · \(fromDescription)" }
     /// 发件人展示（只读，来自创建窗口时的账号）。
     let fromDescription: String
     private(set) var composeKind: MailComposeKind
@@ -223,7 +223,6 @@ final class MailComposeViewModel {
         self.base = draft
         self.composeKind = draft.composeKind
         self.sourceMessageId = draft.sourceMessageId
-        self.attribution = "\(L.string("space." + space.rawValue)) · \(fromDescription)"
         self.fromDescription = fromDescription
         self.toText = Self.text(from: draft.to)
         self.ccText = Self.text(from: draft.cc)

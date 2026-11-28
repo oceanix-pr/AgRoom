@@ -274,6 +274,7 @@ public struct RootView: View {
     /// 首次启动引导标志（P5）
     @AppStorage("agroom.onboarding_completed") private var onboardingCompleted = false
     @State private var showingFirstTask = false
+    @State private var preparingFirstTaskMail = false
     @State private var firstTaskGuidanceHidden: Bool?
     @State private var firstTaskGuidanceSpace: AppSpace?
     @State private var firstTaskGuidanceLoadID = UUID()
@@ -292,12 +293,12 @@ public struct RootView: View {
     /// 邮箱视图模型缓存（按空间隔离）：切页签再回来时邮箱状态不丢失
     @State private var notesModelCache = NotesModelCache()
     @State private var mailModelCache = MailViewModelCache()
-    /// 主侧栏初始宽度：中文短标签使用紧凑列宽，英文为较长标签保留空间。
+    /// 主侧栏初始宽度：中文短标签使用紧凑列宽，其他语言为较长标签保留空间。
     /// 拖拽宽度只保留在当前窗口；布局回调不写观察态或持久化偏好。
     private var sidebarWidths: (minimum: CGFloat, ideal: CGFloat, maximum: CGFloat) {
-        languageManager.activeLanguageCode == "en"
-            ? (190, 200, 260)
-            : (140, 160, 220)
+        languageManager.usesCompactLabels
+            ? (140, 160, 220)
+            : (190, 220, 280)
     }
 
     public init(hub: Hub) {
@@ -359,6 +360,8 @@ public struct RootView: View {
             mailReferenceGeneration = UUID(); mailReferenceError = nil
             sourceRoute = nil
             firstTaskGuidanceError = nil
+            preparingFirstTaskMail = false
+            showingFirstTask = false
             pendingSearchRoute = nil; pendingSearchCommand = nil
             spaceSearchPresentation = nil; searchArtifactPresentation = nil; searchTaskPresentation = nil
             WorkspaceRegistry.shared.releaseAccess(for: oldValue)
@@ -441,7 +444,12 @@ public struct RootView: View {
             guard request.space == hub.spaceStore.current, !isFirstTaskPresented else { return }
             performMenuCommand(request.command)
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("agroom.product.firstTask"))) { _ in showingFirstTask = true }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("agroom.product.firstTask"))) { _ in
+            Task { await openFirstTaskGuidance() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .mailDataChanged)) { _ in
+            Task { await loadFirstTaskGuidance() }
+        }
         .task(id: hub.spaceStore.current) { await loadFirstTaskGuidance() }
         .onReceive(NotificationCenter.default.publisher(for: ProductPreferencesService.didChange)) { _ in
             Task { await loadFirstTaskGuidance() }
@@ -493,10 +501,10 @@ public struct RootView: View {
         }
         .sheet(isPresented: Binding(
             get: { isFirstTaskPresented },
-            set: { if !$0 { finishFirstTaskPresentation(in: hub.spaceStore.current, skipped: true) } }
+            set: { if !$0 && !preparingFirstTaskMail { finishFirstTaskPresentation(in: hub.spaceStore.current, skipped: true) } }
         )) {
             let presentedSpace = hub.spaceStore.current
-            OnboardingView(hub: hub) { request in
+            OnboardingView(hub: hub, onFinish: { request in
                 finishFirstTaskPresentation(in: presentedSpace, skipped: request == nil)
                 guard let request else { return }
                 let space = request.space
@@ -504,7 +512,9 @@ public struct RootView: View {
                 let model = chatModelCache.model(for: space, hub: hub)
                 selection = .chat
                 Task { await model.startFirstTask(request) }
-            }.id(hub.spaceStore.current)
+            }, onConfigureMail: {
+                Task { await prepareFirstTaskMail(in: presentedSpace) }
+            }).id(hub.spaceStore.current)
         }
         .alert(L.string("common.error"), isPresented: Binding(
             get: { firstTaskGuidanceError != nil }, set: { if !$0 { firstTaskGuidanceError = nil } }
@@ -513,7 +523,7 @@ public struct RootView: View {
     }
 
     private var isFirstTaskPresented: Bool {
-        showingFirstTask || (!onboardingCompleted && firstTaskGuidanceSpace == hub.spaceStore.current && firstTaskGuidanceHidden == false)
+        !preparingFirstTaskMail && (showingFirstTask || (!onboardingCompleted && firstTaskGuidanceSpace == hub.spaceStore.current && firstTaskGuidanceHidden == false))
     }
 
     private func loadFirstTaskGuidance() async {
@@ -522,7 +532,16 @@ public struct RootView: View {
         do {
             guard let preferences = hub.makeProductPreferencesService(for: space) else { return }
             let state = try await preferences.firstTaskGuidance()
+            let pendingMail = try await preferences.load(Bool.self, key: "first-result.preparing-mail") == true
+            let mailReady = pendingMail ? try await hub.makeMailService(for: space)?.localSourceSummary() : nil
             guard !Task.isCancelled, firstTaskGuidanceLoadID == ticket, hub.spaceStore.current == space else { return }
+            preparingFirstTaskMail = pendingMail
+            if pendingMail, (mailReady?.syncedMessages ?? 0) > 0, (mailReady?.enabledAccounts ?? 0) > 0 {
+                preparingFirstTaskMail = false
+                showingFirstTask = true
+                try await preferences.save(false, key: "first-result.preparing-mail")
+                guard firstTaskGuidanceLoadID == ticket, hub.spaceStore.current == space else { return }
+            }
             if firstTaskGuidanceSpace != space { firstTaskGuidanceSpace = space }
             if firstTaskGuidanceHidden != !state.shouldOfferNewTask { firstTaskGuidanceHidden = !state.shouldOfferNewTask }
         } catch {
@@ -536,6 +555,7 @@ public struct RootView: View {
         guard space == hub.spaceStore.current else { return }
         onboardingCompleted = true
         showingFirstTask = false
+        preparingFirstTaskMail = false
         guard skipped else { return }
         firstTaskGuidanceLoadID = UUID()
         firstTaskGuidanceSpace = space
@@ -550,6 +570,35 @@ public struct RootView: View {
                 firstTaskGuidanceError = L.string("error.database")
             }
         }
+    }
+
+    private func prepareFirstTaskMail(in space: AppSpace) async {
+        guard space == hub.spaceStore.current, let preferences = hub.makeProductPreferencesService(for: space) else { return }
+        firstTaskGuidanceLoadID = UUID()
+        preparingFirstTaskMail = true
+        showingFirstTask = false
+        selection = .mail
+        do {
+            try await preferences.save(true, key: "first-result.preparing-mail")
+        } catch {
+            guard space == hub.spaceStore.current else { return }
+            preparingFirstTaskMail = false
+            showingFirstTask = true
+            firstTaskGuidanceError = L.string("error.database")
+        }
+    }
+
+    private func openFirstTaskGuidance() async {
+        let space = hub.spaceStore.current
+        do {
+            if let preferences = hub.makeProductPreferencesService(for: space),
+               try await preferences.load(Bool.self, key: "first-result.preparing-mail") == true {
+                try await preferences.save(false, key: "first-result.preparing-mail")
+            }
+            guard hub.spaceStore.current == space else { return }
+            preparingFirstTaskMail = false
+            showingFirstTask = true
+        } catch { firstTaskGuidanceError = L.string("error.database") }
     }
 
     /// 菜单 / ⌘⌥S 与显式工具栏按钮使用同一展开状态，收起后保留图标窄栏。
@@ -645,7 +694,7 @@ public struct RootView: View {
         if let route { applyRoute(route); return }
         guard let (space, action) = command, hub.spaceStore.current == space else { return }
         switch action {
-        case .firstTask: showingFirstTask = true
+        case .firstTask: Task { await openFirstTaskGuidance() }
         case .taskCenter: searchTaskPresentation = .init(space: space)
         case .newChat:
             let model = chatModelCache.model(for: space, hub: hub)
@@ -969,6 +1018,7 @@ struct SidebarNavigationLayout<Sidebar: View, CompactSidebar: View, Detail: View
     @Environment(\.displayScale) private var displayScale
     @State private var resizedSidebarWidth: CGFloat?
     @GestureState private var resizeTranslation: CGFloat = 0
+    @Environment(\.layoutDirection) private var layoutDirection
 
     private var isCollapsed: Bool { columnVisibility == .detailOnly }
     private var expandedSidebarWidth: CGFloat {
@@ -1029,11 +1079,11 @@ struct SidebarNavigationLayout<Sidebar: View, CompactSidebar: View, Detail: View
                             // 分隔条本身会移动，使用固定坐标避免位移被重复抵消。
                             DragGesture(minimumDistance: 1, coordinateSpace: .global)
                                 .updating($resizeTranslation) { value, translation, _ in
-                                    translation = value.translation.width
+                                    translation = value.translation.width * (layoutDirection == .rightToLeft ? -1 : 1)
                                 }
                                 .onEnded { value in
                                     resizedSidebarWidth = clampedSidebarWidth(
-                                        (resizedSidebarWidth ?? sidebarWidths.ideal) + value.translation.width
+                                        (resizedSidebarWidth ?? sidebarWidths.ideal) + value.translation.width * (layoutDirection == .rightToLeft ? -1 : 1)
                                     )
                                 }
                         )
@@ -1267,7 +1317,7 @@ private struct SettingsStyleRow: View {
                     .font(MeetTypography.navigation.weight(isSelected ? .medium : .regular))
                     .foregroundColor(isSelected ? .white : .primary)
                     .lineLimit(1)
-                    .fixedSize(horizontal: LanguageManager.shared.activeLanguageCode != "en", vertical: false)
+                    .fixedSize(horizontal: LanguageManager.shared.usesCompactLabels, vertical: false)
                     .help(L.string(item.labelKey))
                 Spacer(minLength: 0)
                 if item.isComingSoon {

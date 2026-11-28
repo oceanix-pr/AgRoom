@@ -97,6 +97,9 @@ public struct TeamTasksView: View {
             Button(L.string("common.cancel"), role: .cancel) {}
         } message: { task in
             Text(L.format(task.retryAction == .revise ? "team.revise.confirm.message" : "team.retry.confirm.message", task.goal))
+            if let scope = task.plan.retryScope {
+                Text(L.format("team.retry.workspace", scope.workspaceName.isEmpty ? L.string("workspace.default.name") : scope.workspaceName))
+            }
         }
         .confirmationDialog(
             revertTitle,
@@ -197,12 +200,11 @@ public struct TeamTasksView: View {
     }
 
     private func canRetry(_ task: TeamTaskRecord) -> Bool {
-        task.retryAction != nil && !writeRecords.contains { $0.taskID == task.id }
+        task.retryAction != nil && task.plan.retryScope != nil && !writeRecords.contains { $0.taskID == task.id }
     }
 
     private func retry(_ task: TeamTaskRecord) {
         guard retryingTaskID == nil, canRetry(task) else { return }
-        let workspace = WorkspaceRegistry.shared.defaultWorkspace(for: space)
         retryingTaskID = task.id
         Task {
             defer { retryingTaskID = nil }
@@ -212,7 +214,7 @@ public struct TeamTasksView: View {
                     space: space,
                     plan: task.plan,
                     parentTaskID: task.id,
-                    workspacePath: workspace?.path ?? "",
+                    workspacePath: task.plan.retryScope?.directories.first?.canonicalPath ?? "",
                     revisionTitle: L.string("team.revise.subtask")
                 )
                 await load()
@@ -573,6 +575,8 @@ public struct TeamTasksView: View {
             }
             .buttonStyle(.bordered)
             .disabled(retryingTaskID != nil)
+        } else if task.retryAction != nil && task.plan.retryScope == nil {
+            Text(L.string("team.retry.legacy")).font(.caption).foregroundStyle(.secondary)
         }
     }
 

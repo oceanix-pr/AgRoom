@@ -1024,7 +1024,7 @@ struct SkillAICreateSheet: View {
                             originSpace: space,
                             currentSpace: { hub.spaceStore.current }
                         ) {
-                            try savePackage(package, into: store, disableForRepair: verified.hasUnrepairedScripts)
+                            try savePackage(package, into: store, validation: verified.validation, disableForRepair: verified.hasUnrepairedScripts)
                         }
                         if verified.hasUnrepairedScripts {
                             appendLog(L.format("skills.create.ai.log.repair_disabled", savedName))
@@ -1167,15 +1167,16 @@ struct SkillAICreateSheet: View {
         space: AppSpace,
         generator: SkillGenerator,
         log: @MainActor (String) -> Void
-    ) async -> (package: GeneratedSkillPackage, hasUnrepairedScripts: Bool) {
-        guard !package.scripts.isEmpty else { return (package, false) }
+    ) async -> (package: GeneratedSkillPackage, hasUnrepairedScripts: Bool, validation: SkillValidationRecord) {
+        guard !package.scripts.isEmpty else { return (package, false, .unverified) }
         let executor = PythonExecutor(space: space, workspaceName: "skill-gen-check")
         guard executor.runtimeStatus.pythonPath != nil else {
             log(L.string("skills.create.ai.log.check.skip"))
-            return (package, false)
+            return (package, false, SkillValidationRecord(outcome: .runtimeUnavailable))
         }
         var scripts = package.scripts
         var hasUnrepaired = false
+        var checks = package.scripts.map { SkillScriptValidation(path: $0.path, outcome: .unverified) }
         for index in scripts.indices {
             var script = scripts[index]
             for round in 0..<2 {
@@ -1183,8 +1184,16 @@ struct SkillAICreateSheet: View {
                 do {
                     guard let result = try await executor.compileCheck(code: script.content) else {
                         log(L.string("skills.create.ai.log.check.skip"))
+                        checks[index] = SkillScriptValidation(path: script.path, outcome: .runtimeUnavailable)
                         break
                     }
+                    if result.timedOut || result.cancelled || result.indeterminate {
+                        let outcome: SkillValidationOutcome = result.timedOut ? .timedOut : .unverified
+                        checks[index] = SkillScriptValidation(path: script.path, outcome: outcome)
+                        log(L.string("skills.create.ai.log.check.skip"))
+                        break
+                    }
+                    checks[index] = SkillScriptValidation(path: script.path, outcome: result.succeeded ? .syntaxPassed : .failed)
                     // 保存前只验证语法；绝不在这里执行生成脚本的顶层逻辑。
                     var failureText: String?
                     if !result.succeeded {
@@ -1206,19 +1215,28 @@ struct SkillAICreateSheet: View {
                     log(L.format("skills.create.ai.log.check.pass", script.path))
                     break
                 } catch {
+                    if checks[index].outcome == .failed { hasUnrepaired = true }
+                    else { checks[index] = SkillScriptValidation(path: script.path, outcome: .unverified) }
                     log(L.string("skills.create.ai.log.check.skip"))
                     break
                 }
             }
             scripts[index] = script
         }
-        return (GeneratedSkillPackage(skill: package.skill, scripts: scripts, references: package.references), hasUnrepaired)
+        let outcome: SkillValidationOutcome
+        if checks.contains(where: { $0.outcome == .failed }) { outcome = .failed }
+        else if checks.contains(where: { $0.outcome == .timedOut }) { outcome = .timedOut }
+        else if checks.contains(where: { $0.outcome == .runtimeUnavailable }) { outcome = .runtimeUnavailable }
+        else if checks.allSatisfy({ $0.outcome == .syntaxPassed }) { outcome = .syntaxPassed }
+        else { outcome = .unverified }
+        return (GeneratedSkillPackage(skill: package.skill, scripts: scripts, references: package.references), hasUnrepaired,
+                SkillValidationRecord(outcome: outcome, scripts: checks))
     }
 
     /// 落盘：完整包先组装，再原子替换，失败保留旧包；同名冲突自动加序号。
     /// hasUnrepairedScripts=true 时技能以禁用态保存（待人工修复），并在日志中给出指引。
     /// 运行验证不在这里发生；只记录“语法通过/未验证”。
-    private func savePackage(_ package: GeneratedSkillPackage, into store: SkillStore, disableForRepair: Bool = false) throws -> String {
+    private func savePackage(_ package: GeneratedSkillPackage, into store: SkillStore, validation: SkillValidationRecord, disableForRepair: Bool = false) throws -> String {
         var skill = package.skill
         skill.isEnabled = !disableForRepair
         let finalName = try store.installPackage(
@@ -1227,33 +1245,7 @@ struct SkillAICreateSheet: View {
             references: package.references.map { ($0.path, $0.content) },
             overwrite: false
         )
-        let outcome: SkillValidationOutcome
-        if disableForRepair {
-            outcome = .failed
-        } else if package.scripts.isEmpty {
-            outcome = .unverified
-        } else {
-            outcome = .syntaxPassed
-        }
-        store.saveValidationRecord(
-            SkillValidationRecord(
-                outcome: outcome,
-                scripts: package.scripts.map {
-                    SkillScriptValidation(
-                        path: $0.path,
-                        outcome: disableForRepair ? .failed : .syntaxPassed,
-                        message: disableForRepair
-                            ? "The generated script still failed syntax checks."
-                            : "Syntax OK (not executed)."
-                    )
-                },
-                executed: false,
-                detail: disableForRepair
-                    ? "Syntax checks still failed after repair attempts."
-                    : "Syntax checked only; runtime smoke test has not run."
-            ),
-            name: finalName
-        )
+        store.saveValidationRecord(validation, name: finalName)
         HubLogger.shared.info("AI skill creation completed")
         return finalName
     }
@@ -1648,7 +1640,15 @@ struct SkillRewriteSheet: View {
                 }
                 // 现有技能上下文：SKILL.md + 文件清单
                 let currentSKILLMD = try store.readFile(name: skillName, relativePath: "SKILL.md")
-                let fileList = (try? store.files(for: skillName)) ?? []
+                let fileList = try store.files(for: skillName)
+                var resourceText: [String] = []
+                var resourceBytes = 0
+                for path in fileList where ["py", "sh", "md", "txt", "json", "csv", "yaml", "yml", "toml", "js", "ts", "sql"].contains(URL(fileURLWithPath: path).pathExtension.lowercased()) {
+                    let content = try store.readFile(name: skillName, relativePath: path)
+                    resourceBytes += content.utf8.count
+                    guard resourceBytes <= 512 * 1024 else { throw SkillStore.StoreError.resourceTooLarge }
+                    resourceText.append("File: " + path + "\n" + content)
+                }
 
                 var knowledgeContext: String?
                 if useKnowledge {
@@ -1695,6 +1695,7 @@ struct SkillRewriteSheet: View {
                     skillName: skillName,
                     currentSKILLMD: currentSKILLMD,
                     fileList: fileList,
+                    resourceContent: resourceText.joined(separator: "\n\n"),
                     instruction: instruction,
                     knowledgeContext: knowledgeContext,
                     usageFeedback: usageFeedback
@@ -1737,7 +1738,7 @@ struct SkillRewriteSheet: View {
                     originSpace: space,
                     currentSpace: { hub.spaceStore.current }
                 ) {
-                    try applyPackage(package, into: store)
+                    try applyPackage(package, into: store, validation: verified.validation)
                     // 脚本两轮修复仍失败 → 就地禁用，避免坏技能被调度
                     if verified.hasUnrepairedScripts {
                         try? store.setEnabled(name: skillName, enabled: false)
@@ -1760,7 +1761,7 @@ struct SkillRewriteSheet: View {
     /// 就地覆盖：SKILL.md + 脚本；保留启用状态与其他资源文件。
     /// 先组装完整新包再原子替换；覆盖前自动快照旧版本到 versions/（编辑器「历史版本」可回滚）。
     /// 运行验证不在重写流程中发生。
-    private func applyPackage(_ package: GeneratedSkillPackage, into store: SkillStore) throws {
+    private func applyPackage(_ package: GeneratedSkillPackage, into store: SkillStore, validation: SkillValidationRecord) throws {
         var skill = package.skill
         skill.name = skillName
         // 保留原启用状态（installPackage 会按 isEnabled 同步停用标记）
@@ -1774,17 +1775,7 @@ struct SkillRewriteSheet: View {
             overwrite: true,
             preserveExistingResources: true
         )
-        store.saveValidationRecord(
-            SkillValidationRecord(
-                outcome: package.scripts.isEmpty ? .unverified : .syntaxPassed,
-                scripts: package.scripts.map {
-                    SkillScriptValidation(path: $0.path, outcome: .syntaxPassed, message: "Syntax OK (not executed).")
-                },
-                executed: false,
-                detail: "Skill rewritten; runtime smoke test has not run."
-            ),
-            name: skillName
-        )
+        store.saveValidationRecord(validation, name: skillName)
         HubLogger.shared.info("AI skill rewrite completed")
     }
 

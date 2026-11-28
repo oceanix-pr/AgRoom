@@ -208,6 +208,8 @@ private struct NativeAppWindowView: View {
         }
         .tint(model.space.tint)
         .environment(languageManager)
+        .environment(\.locale, Locale(identifier: languageManager.activeLanguageCode))
+        .environment(\.layoutDirection, languageManager.layoutDirection)
         .onChange(of: currentSpace()) { _, space in NativeAppLifecycle.synchronize(space: space) }
         .onChange(of: languageManager.version) { _, _ in
             NativeAppWindowCoordinator.shared.refreshTitles()

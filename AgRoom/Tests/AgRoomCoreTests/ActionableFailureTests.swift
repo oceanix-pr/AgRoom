@@ -112,6 +112,7 @@ struct ActionableFailureTests {
             case .english: #expect(message.contains("Could not complete"))
             case .simplifiedChinese: #expect(message.contains("无法完成"))
             case .traditionalChinese: #expect(message.contains("無法完成"))
+            case .spanish, .french, .arabic, .russian: #expect(!message.isEmpty)
             case .system: break
             }
         }

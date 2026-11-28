@@ -9,7 +9,7 @@ public enum NativeAppGenerator {
     Required top-level fields: manifest, i18n, state, dataSources, views, actions. Version 2 adds optional scripts; version 3 adds optional capabilities; version 4 adds optional boards.
     manifest: id (lowercase ASCII letters, digits, hyphens, <=64 chars), version (positive integer), dslVersion:1, 2, 3 or 4,
     nameKey, summaryKey (i18n keys), icon (SF Symbol name), optional width (480...1600), height (360...1200).
-    i18n: exactly en, zh-Hans, zh-Hant dictionaries. Every label key must exist, translated and nonempty in all three.
+    i18n: en, zh-Hans, zh-Hant, es, fr, ar, ru dictionaries for newly created apps. Existing definitions containing only en, zh-Hans and zh-Hant remain valid. Every label key must exist, translated and nonempty in every provided language.
     state: dictionary of {initial: string|boolean|number, persistent: boolean}. <=32 fields, <=32KiB per string.
     dataSources: dictionary of {kind:"knowledge", searchKey: optional string state key, pageSize:1...50}.
     dataSources also supports {kind:"records",collection:"collection-id",searchKey:optional string state key,pageSize:1...50}.
@@ -60,7 +60,7 @@ public enum NativeAppGenerator {
     A piece: {id:"unique-id",labelKey:"i18n-key",x:integer,y:integer,width:positive-integer,height:positive-integer,axis:optional "both"|"horizontal"|"vertical"}.
     Coordinates are zero-based integer cells. <=32 pieces per board; no overlaps, duplicate IDs, out-of-bounds pieces or unknown fields.
     The goal names one existing piece and its target top-left coordinate inside the board. Reaching it wins; pieces never leave the board.
-    Every piece label must have nonempty en/zh-Hans/zh-Hant translations. Labels and piece order may change on update; persistent board IDs, dimensions, piece IDs/sizes/initial positions/axes and goal must remain compatible.
+    Every piece label must have a nonempty translation in every provided language. Labels and piece order may change on update; persistent board IDs, dimensions, piece IDs/sizes/initial positions/axes and goal must remain compatible.
     Render with {id:"game-view",type:"board",board:"board-id"}. The host provides proportional layout, grid snapping, collision-clamped dragging,
     selectable blocks, arrow-key and accessible direction controls, a move counter and a conditional victory message.
     Each move is a single horizontal or vertical slide. The host checks EVERY intermediate cell and commits position, move count, undo/redo history and victory together.
@@ -155,9 +155,15 @@ public enum NativeAppTemplates {
         for (language, name, summary) in [
             ("en", "Knowledge Browser", "Search and read knowledge in this space."),
             ("zh-Hans", "知识浏览", "搜索、浏览当前空间的知识条目。"),
-            ("zh-Hant", "知識瀏覽", "搜尋、瀏覽目前空間的知識條目。")
+            ("zh-Hant", "知識瀏覽", "搜尋、瀏覽目前空間的知識條目。"),
+            ("es", "Explorador de conocimiento", "Busca y lee el conocimiento de este espacio."),
+            ("fr", "Explorateur de connaissances", "Recherchez et lisez les connaissances de cet espace."),
+            ("ar", "متصفح المعرفة", "ابحث في معارف هذا الفضاء واقرأها."),
+            ("ru", "Обзор знаний", "Поиск и чтение знаний этого пространства.")
         ] { app.i18n[language]?["name"] = name; app.i18n[language]?["summary"] = summary }
-        for (language, label) in [("en", "Search knowledge"), ("zh-Hans", "搜索知识"), ("zh-Hant", "搜尋知識")] {
+        for (language, label) in [("en", "Search knowledge"), ("zh-Hans", "搜索知识"), ("zh-Hant", "搜尋知識"),
+                                  ("es", "Buscar conocimiento"), ("fr", "Rechercher des connaissances"),
+                                  ("ar", "البحث في المعرفة"), ("ru", "Поиск знаний")] {
             app.i18n[language]?["search"] = label
         }
         // Build through the same decoder/validator used by external definitions.
@@ -176,7 +182,11 @@ public enum NativeAppTemplates {
       "i18n":{
         "en":{"name":"Text Statistics","summary":"Analyze text with an approved offline Python function.","body":"Text","run":"Analyze","lines":"Lines","words":"Words"},
         "zh-Hans":{"name":"文本统计","summary":"通过经确认的离线 Python 函数分析文本。","body":"文本","run":"分析","lines":"行数","words":"词数"},
-        "zh-Hant":{"name":"文字統計","summary":"透過經確認的離線 Python 函式分析文字。","body":"文字","run":"分析","lines":"行數","words":"詞數"}
+        "zh-Hant":{"name":"文字統計","summary":"透過經確認的離線 Python 函式分析文字。","body":"文字","run":"分析","lines":"行數","words":"詞數"},
+        "es":{"name":"Estadísticas de texto","summary":"Analiza texto con una función de Python sin conexión y con aprobación.","body":"Texto","run":"Analizar","lines":"Líneas","words":"Palabras"},
+        "fr":{"name":"Statistiques de texte","summary":"Analysez le texte avec une fonction Python hors ligne approuvée.","body":"Texte","run":"Analyser","lines":"Lignes","words":"Mots"},
+        "ar":{"name":"إحصاءات النص","summary":"حلّل النص بدالة Python محلية بعد الموافقة.","body":"النص","run":"تحليل","lines":"الأسطر","words":"الكلمات"},
+        "ru":{"name":"Статистика текста","summary":"Анализ текста одобренной локальной функцией Python.","body":"Текст","run":"Анализировать","lines":"Строки","words":"Слова"}
       },
       "state":{"body":{"initial":"","persistent":true},"lines":{"initial":0,"persistent":false},"words":{"initial":0,"persistent":false}},
       "dataSources":{},
@@ -198,7 +208,11 @@ public enum NativeAppTemplates {
       "i18n":{
         "en":{"name":"Quick Note","summary":"Keep private notes in this app; publish to Knowledge when needed.","title":"Title","body":"Content","save":"Publish to Knowledge","search":"Search notes","local-save":"Save Note","new":"New Note","edit":"Edit Selected","delete":"Delete Selected"},
         "zh-Hans":{"name":"随手记","summary":"在此应用中独立保存笔记，需要时再发布到知识库。","title":"标题","body":"内容","save":"发布到知识库","search":"搜索笔记","local-save":"保存笔记","new":"新建笔记","edit":"编辑所选笔记","delete":"删除所选笔记"},
-        "zh-Hant":{"name":"隨手記","summary":"在此應用程式中獨立儲存筆記，需要時再發佈到知識庫。","title":"標題","body":"內容","save":"發佈到知識庫","search":"搜尋筆記","local-save":"儲存筆記","new":"新增筆記","edit":"編輯所選筆記","delete":"刪除所選筆記"}
+        "zh-Hant":{"name":"隨手記","summary":"在此應用程式中獨立儲存筆記，需要時再發佈到知識庫。","title":"標題","body":"內容","save":"發佈到知識庫","search":"搜尋筆記","local-save":"儲存筆記","new":"新增筆記","edit":"編輯所選筆記","delete":"刪除所選筆記"},
+        "es":{"name":"Nota rápida","summary":"Guarda notas en esta aplicación y publícalas en Conocimiento cuando lo necesites.","title":"Título","body":"Contenido","save":"Publicar en Conocimiento","search":"Buscar notas","local-save":"Guardar nota","new":"Nueva nota","edit":"Editar selección","delete":"Eliminar selección"},
+        "fr":{"name":"Note rapide","summary":"Conservez vos notes dans cette application et publiez-les dans les connaissances au besoin.","title":"Titre","body":"Contenu","save":"Publier dans les connaissances","search":"Rechercher des notes","local-save":"Enregistrer la note","new":"Nouvelle note","edit":"Modifier la sélection","delete":"Supprimer la sélection"},
+        "ar":{"name":"ملاحظة سريعة","summary":"احفظ ملاحظاتك في هذا التطبيق وانشرها في المعرفة عند الحاجة.","title":"العنوان","body":"المحتوى","save":"نشر في المعرفة","search":"البحث في الملاحظات","local-save":"حفظ الملاحظة","new":"ملاحظة جديدة","edit":"تعديل المحدد","delete":"حذف المحدد"},
+        "ru":{"name":"Быстрая заметка","summary":"Храните заметки в этом приложении и при необходимости публикуйте их в базе знаний.","title":"Заголовок","body":"Содержимое","save":"Опубликовать в базе знаний","search":"Поиск заметок","local-save":"Сохранить заметку","new":"Новая заметка","edit":"Изменить выбранное","delete":"Удалить выбранное"}
       },
       "state":{"title":{"initial":"","persistent":true},"body":{"initial":"","persistent":true},"notes-query":{"initial":"","persistent":false}},
       "dataSources":{"notes":{"kind":"records","collection":"notes","searchKey":"notes-query","pageSize":20}},

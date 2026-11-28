@@ -196,22 +196,32 @@ struct RequestToolsView: View {
 }
 
 struct KnowledgeSourceView: View {
-    let item: KnowledgeItem
+    let item: KnowledgeItem?
     let citation: KnowledgeCitation
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack { Text(item.title).font(.title2); Spacer(); Button(L.string("common.close")) { dismiss() } }
+            HStack { Text(citation.title).font(.title2); Spacer(); Button(L.string("common.close")) { dismiss() } }
             Text(L.format("product.knowledge.passage", citation.passage)).font(.caption).foregroundStyle(.secondary)
-            Text(L.string("product.knowledge.position.help")).font(.caption).foregroundStyle(.secondary)
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        let offset = min(max(citation.offset, 0), item.content.count)
-                        Text(String(item.content.prefix(offset))).textSelection(.enabled)
-                        Text(String(item.content.dropFirst(offset))).textSelection(.enabled).id("passage")
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                }.onAppear { proxy.scrollTo("passage", anchor: .top) }
+            if let excerpt = citation.excerpt {
+                Text(L.string("product.knowledge.snapshot")).font(.caption).foregroundStyle(.secondary)
+                ScrollView { Text(excerpt).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                if let item {
+                    DisclosureGroup(L.string("product.knowledge.current")) {
+                        ScrollView { Text(item.content).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                    }
+                }
+            } else if let item {
+                Text(L.string("product.knowledge.position.help")).font(.caption).foregroundStyle(.secondary)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
+                            let offset = min(max(citation.offset, 0), item.content.count)
+                            Text(String(item.content.prefix(offset))).textSelection(.enabled)
+                            Text(String(item.content.dropFirst(offset))).textSelection(.enabled).id("passage")
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }.onAppear { proxy.scrollTo("passage", anchor: .top) }
+                }
             }
         }.padding(20).frame(width: 720, height: 600)
     }

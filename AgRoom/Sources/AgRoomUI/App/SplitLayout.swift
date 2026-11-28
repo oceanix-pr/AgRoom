@@ -22,6 +22,7 @@ struct SplitDivider: View {
     var onEditingChanged: ((Bool) -> Void)? = nil
 
     @State private var dragStartWidth: Double?
+    @Environment(\.layoutDirection) private var layoutDirection
     @GestureState private var isDragging = false
 
     var body: some View {
@@ -65,7 +66,8 @@ struct SplitDivider: View {
     }
 
     private func width(for value: DragGesture.Value) -> Double {
-        let proposed = (dragStartWidth ?? columnWidth) + Double(value.translation.width) * direction
+        let layoutSign = layoutDirection == .rightToLeft ? -1.0 : 1.0
+        let proposed = (dragStartWidth ?? columnWidth) + Double(value.translation.width) * direction * layoutSign
         return min(max(proposed, range.lowerBound), range.upperBound)
     }
 }

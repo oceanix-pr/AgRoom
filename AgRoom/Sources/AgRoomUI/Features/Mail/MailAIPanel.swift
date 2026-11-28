@@ -114,7 +114,11 @@ struct MailAIPanel: View {
                     (.auto, L.string("mail.ai.option.auto")),
                     (.simplifiedChinese, L.string("mail.ai.lang.zhHans")),
                     (.traditionalChinese, L.string("mail.ai.lang.zhHant")),
-                    (.english, L.string("mail.ai.lang.en"))
+                    (.english, L.string("mail.ai.lang.en")),
+                    (.spanish, "Español"),
+                    (.french, "Français"),
+                    (.arabic, "العربية"),
+                    (.russian, "Русский")
                 ])
                 optionMenu(L.string("mail.ai.tone"), selection: $viewModel.aiTone, options: [
                     (.auto, L.string("mail.ai.option.auto")),

@@ -32,7 +32,7 @@ struct ProductTaskDetailView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title.isEmpty ? L.string("chat.new") : item.title).font(.title2.bold()).lineLimit(2)
-                    Label((currentJob ?? job)?.state.taskCenterLabel ?? currentStatus.label, systemImage: currentStatus.icon).font(.callout)
+                    Label(item.source == .scheduled ? L.string("scheduled.status." + (scheduled?.status.rawValue ?? item.sourceStatus)) : ((currentJob ?? job)?.state.taskCenterLabel ?? currentStatus.label), systemImage: currentStatus.icon).font(.callout)
                 }
                 Spacer()
                 Button(L.string("common.close")) { dismiss() }.keyboardShortcut(.cancelAction)

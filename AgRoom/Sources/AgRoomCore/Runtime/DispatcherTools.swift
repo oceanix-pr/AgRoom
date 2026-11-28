@@ -3015,7 +3015,8 @@ public enum DispatcherToolFactory {
         repository: RepositoryReader? = nil,
         codingTask: CodingTaskRuntime? = nil,
         extraTools: [any DispatcherTool] = [],
-        resourceContext: RunResourceContext? = nil
+        resourceContext: RunResourceContext? = nil,
+        teamRetryScope: TeamRetryScope? = nil
     ) -> [any DispatcherTool] {
         guard resourceContext.map({ $0.isValid && $0.space == space }) ?? true else { return [] }
         let activeMemory = resourceContext?.excludesMemory == true ? nil : memoryService?.forRun(in: resourceContext?.workspaceID)
@@ -3178,7 +3179,8 @@ public enum DispatcherToolFactory {
                 verifier: DispatcherTeamVerifier(provider: provider,
                     writeStore: teamAllowsWrites ? teamWriteStore : nil, repository: writeRepository),
                 allowsWrites: teamAllowsWrites,
-                space: space
+                space: space,
+                retryScope: teamRetryScope
             ))
         }
         // 技能渐进式披露：注册表进系统提示词，正文/资源文件按需经工具加载

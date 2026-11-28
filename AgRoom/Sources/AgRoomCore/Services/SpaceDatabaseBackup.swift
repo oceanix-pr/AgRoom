@@ -863,8 +863,17 @@ struct SpaceDatabaseBackupStore: Sendable {
                 }
                 else if name == "scheduled_tasks", !exporting { set("enabled", .integer(0)); set("nextFireAt", .null) }
                 else if name == "scheduled_runs", !exporting, ["pending", "running"].contains(text("status") ?? "") { set("status", .text("interrupted")) }
-                else if name == "team_tasks", !exporting,
-                        let status = text("status").flatMap(TeamTaskStatus.init(rawValue:)), !status.isTerminal { set("status", .text("interrupted")) }
+                else if name == "team_tasks" {
+                    if let data = text("planJSON")?.data(using: .utf8), var plan = try? JSONDecoder().decode(TeamPlan.self, from: data), plan.retryScope != nil {
+                        plan.retryScope = nil
+                        let encoder = JSONEncoder()
+                        encoder.outputFormatting = .sortedKeys
+                        set("planJSON", .text(String(decoding: try encoder.encode(plan), as: UTF8.self)))
+                    }
+                    if !exporting, let status = text("status").flatMap(TeamTaskStatus.init(rawValue:)), !status.isTerminal {
+                        set("status", .text("interrupted"))
+                    }
+                }
                 else if name == "mail_attachments", !exporting {
                     set("localPath", text("localPath").flatMap { pathMappings[$0] }.map(SpaceBackupValue.text) ?? .null)
                 }

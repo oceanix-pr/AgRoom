@@ -122,6 +122,7 @@ public struct KnowledgeCitation: Codable, Equatable, Identifiable, Sendable {
     public let title: String
     public let passage: Int
     public let offset: Int
+    public var excerpt: String? = nil
     public var id: String { "\(itemID):\(passage)" }
     public var link: String { "knowledge://\(itemID.uuidString)/\(passage)" }
 
@@ -147,7 +148,7 @@ public struct KnowledgeCitation: Codable, Equatable, Identifiable, Sendable {
             return "\(uuid):\(passage)"
         })
         var seen = Set<String>()
-        return candidates.filter { ids.contains($0.id) && seen.insert($0.id).inserted }
+        return candidates.reversed().filter { ids.contains($0.id) && seen.insert($0.id).inserted }.reversed()
     }
 
     public static func from(result: String) -> [KnowledgeCitation] {
@@ -157,7 +158,8 @@ public struct KnowledgeCitation: Codable, Equatable, Identifiable, Sendable {
                 guard let raw = row["item_id"] as? String, let id = UUID(uuidString: raw),
                       let title = row["title"] as? String, let passage = row["passage"] as? Int, passage > 0,
                       let offset = row["offset"] as? Int, offset >= 0 else { return nil }
-                return .init(itemID: id, title: title, passage: passage, offset: offset)
+                return .init(itemID: id, title: title, passage: passage, offset: offset,
+                             excerpt: row["content"] as? String)
             }
         }
         // Legacy trace results used a textual header; keep historical conversations readable.

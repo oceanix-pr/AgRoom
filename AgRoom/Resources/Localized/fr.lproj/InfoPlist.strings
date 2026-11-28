@@ -1,0 +1,5 @@
+"CFBundleDisplayName" = "AgRoom";
+"CFBundleName" = "AgRoom";
+"NSMicrophoneUsageDescription" = "AgRoom utilise le microphone pour enregistrer le son de vos notes.";
+"NSSpeechRecognitionUsageDescription" = "AgRoom utilise la reconnaissance vocale du système pour transcrire le son dans vos notes. Le son peut être envoyé à Apple pour traitement.";
+"NSRemindersFullAccessUsageDescription" = "AgRoom crée et suit vos tâches dans l’app Rappels du système.";

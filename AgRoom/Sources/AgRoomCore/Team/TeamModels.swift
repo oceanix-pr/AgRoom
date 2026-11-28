@@ -226,12 +226,32 @@ public struct TeamSubtask: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
-/// 计划是数据：可校验、可持久化、可重放；不是一段自然语言。
+/// 重试时复用原任务的资源范围与目录身份。
+public struct TeamRetryScope: Codable, Sendable, Equatable {
+    public let resourceContext: RunResourceContext
+    public let workspaceName: String
+    public let directories: [TaskDirectoryIdentity]
+
+    public init(resourceContext: RunResourceContext, workspaceName: String, directories: [TaskDirectoryIdentity]) {
+        self.resourceContext = resourceContext
+        self.workspaceName = workspaceName
+        self.directories = directories
+    }
+
+    public func matches(_ workspace: ChatWorkspace) -> Bool {
+        resourceContext.isValid && resourceContext.space == workspace.space && resourceContext.workspaceID == workspace.id
+            && !directories.isEmpty && directories.count == workspace.folderURLs.count
+            && zip(directories, workspace.folderURLs).allSatisfy { $0.matches($1) }
+    }
+}
+
+/// 可校验、可持久化、可重放的协作计划。
 public struct TeamPlan: Codable, Sendable, Equatable {
     public var goal: String
     public var acceptance: [String]
     public var subtasks: [TeamSubtask]
     public var maxConcurrency: Int
+    public var retryScope: TeamRetryScope? = nil
     var revision: TeamRevision?
 
     /// 模型提供的估算只作计划参考。合计无法表示时，任务板省略该数字。

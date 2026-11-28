@@ -269,6 +269,7 @@
 		686CF1B3A271D097DE1469F7 /* KnowledgeRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 085B890E7848F5FB2E9D287B /* KnowledgeRanker.swift */; };
 		68AB61A7D349261BA784C8B8 /* NoteFolderMirror.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46B25D3E80DF956249C12A3C /* NoteFolderMirror.swift */; };
 		68F0C1F4FA30EC1B0BA098ED /* MailPortabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 828EBF1070E07EC65976630A /* MailPortabilityTests.swift */; };
+		693C31024E854FD9558C60B6 /* ProductWorkflowImprovementsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7D001E1CB130A066215BD50 /* ProductWorkflowImprovementsTests.swift */; };
 		69609B8656AB39653C02BD30 /* ProcessTerminator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0BE7024602444010EE3766 /* ProcessTerminator.swift */; };
 		6981CF70B491E80317C5822E /* BackupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6C0E546EDDDAF7BB0BA726 /* BackupService.swift */; };
 		6A1962663F220E05D995B60A /* DaemonHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755373D52A756D3779858A2B /* DaemonHandoff.swift */; };
@@ -763,19 +764,18 @@
 		0A6A6D98A45FD38738088F20 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers/EmbeddingRuntime/arm64;
+			dstPath = Contents/Helpers/EmbeddingRuntime/x86_64;
 			dstSubfolderSpec = 1;
 			files = (
-				67B6865080AA9BAF756020A5 /* libggml-base.0.dylib in CopyFiles */,
-				9A2DA1B67BFB31E154A36674 /* libggml-blas.0.dylib in CopyFiles */,
-				374884886302EE67FC0FC96B /* libggml-cpu.0.dylib in CopyFiles */,
-				089D1B7C64D1F2F93740E4D5 /* libggml-metal.0.dylib in CopyFiles */,
-				5B4DA79A2E9D46212502B611 /* libggml-rpc.0.dylib in CopyFiles */,
-				813BED9DC132966D1070CB2C /* libggml.0.dylib in CopyFiles */,
-				91D4AAA3898E0A0C38A85910 /* libllama-common.0.dylib in CopyFiles */,
-				F704CB1ED744F9502A7CE205 /* libllama.0.dylib in CopyFiles */,
-				6AC7DD4331D1B490AE566D47 /* llama-embedding in CopyFiles */,
-				92D635D3E1E31751CB4C8A6D /* llama-intent in CopyFiles */,
+				5C9B31E827BAEB3D9C1DA570 /* libggml-base.0.dylib in CopyFiles */,
+				F2EE452DFE7D9F7D840EBB7F /* libggml-blas.0.dylib in CopyFiles */,
+				45F7F06BE36E7B7B53BA6659 /* libggml-cpu.0.dylib in CopyFiles */,
+				276BD14A89F076257C982CDA /* libggml-rpc.0.dylib in CopyFiles */,
+				F52B90FE0EDF84CFA3683E39 /* libggml.0.dylib in CopyFiles */,
+				7F4CFB55EED1F24E39500075 /* libllama-common.0.dylib in CopyFiles */,
+				635FCB7B2421C66D4869571E /* libllama.0.dylib in CopyFiles */,
+				511B59B94EA523938B494D19 /* llama-embedding in CopyFiles */,
+				98A1E8D7E7F84D8C6760A692 /* llama-intent in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -806,30 +806,31 @@
 		71B5A416B7297D498107B8B4 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = EmbeddingRuntimeNotices;
-			dstSubfolderSpec = 7;
+			dstPath = Contents/Helpers/EmbeddingRuntime/arm64;
+			dstSubfolderSpec = 1;
 			files = (
-				247853B089989DA5FBC845EC /* LICENSE in CopyFiles */,
-				12321C771A487422A642F5B5 /* licenses in CopyFiles */,
-				F6855039ABA54DBE8C5AD7A3 /* provenance.json in CopyFiles */,
+				67B6865080AA9BAF756020A5 /* libggml-base.0.dylib in CopyFiles */,
+				9A2DA1B67BFB31E154A36674 /* libggml-blas.0.dylib in CopyFiles */,
+				374884886302EE67FC0FC96B /* libggml-cpu.0.dylib in CopyFiles */,
+				089D1B7C64D1F2F93740E4D5 /* libggml-metal.0.dylib in CopyFiles */,
+				5B4DA79A2E9D46212502B611 /* libggml-rpc.0.dylib in CopyFiles */,
+				813BED9DC132966D1070CB2C /* libggml.0.dylib in CopyFiles */,
+				91D4AAA3898E0A0C38A85910 /* libllama-common.0.dylib in CopyFiles */,
+				F704CB1ED744F9502A7CE205 /* libllama.0.dylib in CopyFiles */,
+				6AC7DD4331D1B490AE566D47 /* llama-embedding in CopyFiles */,
+				92D635D3E1E31751CB4C8A6D /* llama-intent in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		9142A4A8E38B2C7F1D7953B4 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = Contents/Helpers/EmbeddingRuntime/x86_64;
-			dstSubfolderSpec = 1;
+			dstPath = EmbeddingRuntimeNotices;
+			dstSubfolderSpec = 7;
 			files = (
-				5C9B31E827BAEB3D9C1DA570 /* libggml-base.0.dylib in CopyFiles */,
-				F2EE452DFE7D9F7D840EBB7F /* libggml-blas.0.dylib in CopyFiles */,
-				45F7F06BE36E7B7B53BA6659 /* libggml-cpu.0.dylib in CopyFiles */,
-				276BD14A89F076257C982CDA /* libggml-rpc.0.dylib in CopyFiles */,
-				F52B90FE0EDF84CFA3683E39 /* libggml.0.dylib in CopyFiles */,
-				7F4CFB55EED1F24E39500075 /* libllama-common.0.dylib in CopyFiles */,
-				635FCB7B2421C66D4869571E /* libllama.0.dylib in CopyFiles */,
-				511B59B94EA523938B494D19 /* llama-embedding in CopyFiles */,
-				98A1E8D7E7F84D8C6760A692 /* llama-intent in CopyFiles */,
+				247853B089989DA5FBC845EC /* LICENSE in CopyFiles */,
+				12321C771A487422A642F5B5 /* licenses in CopyFiles */,
+				F6855039ABA54DBE8C5AD7A3 /* provenance.json in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -986,6 +987,7 @@
 		36EB9F6508E9E878B29723AF /* NotesRecordingStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesRecordingStatus.swift; sourceTree = "<group>"; };
 		385D3404C80EE82CA1A73A9F /* MailServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailServiceTests.swift; sourceTree = "<group>"; };
 		387C43F2D024EEEB16829BA4 /* ToolCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCatalog.swift; sourceTree = "<group>"; };
+		3989FCC663A230FC2EFB93E7 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		39A584F412CB7D83CAA31D51 /* KnowledgeTreeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeTreeSidebar.swift; sourceTree = "<group>"; };
 		3A1EB74ED3374047792884CF /* NotesWorkflowPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesWorkflowPreview.swift; sourceTree = "<group>"; };
 		3BE27549C1517E17CE180AD0 /* CloudProviderResponses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudProviderResponses.swift; sourceTree = "<group>"; };
@@ -1011,7 +1013,7 @@
 		42B057CC9AECD7D45F83DC69 /* NativeAppFilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppFilesView.swift; sourceTree = "<group>"; };
 		43395EA1BCAD4D0E663FCA42 /* ModelParameters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelParameters.swift; sourceTree = "<group>"; };
 		438E0959CC2789C8689F6831 /* MailArchiveBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailArchiveBundle.swift; sourceTree = "<group>"; };
-		43B02FFBA8D2A2AF5847283D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		43B02FFBA8D2A2AF5847283D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		43CE43B5C2C09B82612F2687 /* MemoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryService.swift; sourceTree = "<group>"; };
 		4480BBFF4FAF6011A2326BDB /* MarkdownWebRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownWebRenderer.swift; sourceTree = "<group>"; };
 		4483CE12BE2DEB1DF1C95538 /* RepositorySymbolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepositorySymbolTests.swift; sourceTree = "<group>"; };
@@ -1049,6 +1051,7 @@
 		4E3B0265300B411B84E20982 /* SkillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillsView.swift; sourceTree = "<group>"; };
 		4E45469BCF6AD21FBAF18D01 /* MailCoverageBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailCoverageBar.swift; sourceTree = "<group>"; };
 		4F1764C1B2AD37E10802BD73 /* NativeAppWorkspaceCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppWorkspaceCommands.swift; sourceTree = "<group>"; };
+		4F1776E019D10C3B64691FC8 /* ar */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ar; path = ar.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		4F3D015A522ABCA547A55C60 /* MailOperationUndo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailOperationUndo.swift; sourceTree = "<group>"; };
 		50C9C3B3E17D3D6D7B10074D /* TeamRunTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamRunTool.swift; sourceTree = "<group>"; };
 		5101CF7274DB7B492B053EB9 /* NoteModelDownload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteModelDownload.swift; sourceTree = "<group>"; };
@@ -1061,6 +1064,7 @@
 		52B05AA9D0C934F8D860C7C9 /* MySQLWireTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MySQLWireTests.swift; sourceTree = "<group>"; };
 		533762B7270200473F956FB9 /* SkillStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillStore.swift; sourceTree = "<group>"; };
 		53645FEE06AAE8304E243679 /* SpaceBackupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceBackupTests.swift; sourceTree = "<group>"; };
+		53DA14556BC240E6FC4613BB /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
 		54967A4E837324A99C7C7658 /* AppTaskTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTaskTools.swift; sourceTree = "<group>"; };
 		54D9C07FB32578A997D5F553 /* ScheduledTasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledTasksView.swift; sourceTree = "<group>"; };
 		54EE34CD599542D3F5CBC57A /* NativeAppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppStore.swift; sourceTree = "<group>"; };
@@ -1129,6 +1133,7 @@
 		7019F22F5B4157CFC9506338 /* ChatScrollState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScrollState.swift; sourceTree = "<group>"; };
 		706DE687A50597CEC942BA61 /* libllama.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libllama.0.dylib; sourceTree = "<group>"; };
 		71D9316D7A2344A1912FB225 /* libggml-metal.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libggml-metal.0.dylib"; sourceTree = "<group>"; };
+		72038ADD28C2BA95D1D31089 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		72282FCA3706E449E5D1167A /* MarkdownEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownEditorView.swift; sourceTree = "<group>"; };
 		722AB269506D5DE9B2BE9859 /* ProductTaskBudget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductTaskBudget.swift; sourceTree = "<group>"; };
 		7237C1ABA5A80811DD342940 /* NativeAppWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppWorkspace.swift; sourceTree = "<group>"; };
@@ -1145,6 +1150,7 @@
 		775053C02177EE0D17CD2917 /* CloudProviderTranscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudProviderTranscription.swift; sourceTree = "<group>"; };
 		778FF3FFF1C3EB99842B03A5 /* MailFolderOperationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailFolderOperationTests.swift; sourceTree = "<group>"; };
 		77B2A72D9CCDA3569D855B63 /* ProductCostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCostView.swift; sourceTree = "<group>"; };
+		780DA203A203CE601AD06662 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		781576D4A01E5AF6051C09E7 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		7856DF8A1FD0F396A05A4262 /* MailSendCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailSendCoordinator.swift; sourceTree = "<group>"; };
 		78A87E9AA450886E44DB1647 /* PythonRuntimeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonRuntimeManager.swift; sourceTree = "<group>"; };
@@ -1230,9 +1236,9 @@
 		990532758024115E99F021EC /* mermaid.min.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = mermaid.min.js; sourceTree = "<group>"; };
 		996642ECCECDA0FD89BCAF78 /* MailExportPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailExportPlan.swift; sourceTree = "<group>"; };
 		99816E0FB8174C2EA6D21976 /* AgRoomCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgRoomCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		9A0F9FBD53222304A95E7417 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
+		9A0F9FBD53222304A95E7417 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		9A6F6C079C49B9DBC52D063F /* MailHeaderText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailHeaderText.swift; sourceTree = "<group>"; };
-		9A9891AD1E3B86E8365410C8 /* llama-intent */ = {isa = PBXFileReference; path = "llama-intent"; sourceTree = "<group>"; };
+		9A9891AD1E3B86E8365410C8 /* llama-intent */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = "llama-intent"; sourceTree = "<group>"; };
 		9B39E125DB7CEE5990B8A062 /* MailMessageMenuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailMessageMenuTests.swift; sourceTree = "<group>"; };
 		9B6A7F4A823E2287F5C203B3 /* NativeAppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppRuntime.swift; sourceTree = "<group>"; };
 		9BAC083202B654BE563CB134 /* ShellFileRedirection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellFileRedirection.swift; sourceTree = "<group>"; };
@@ -1295,7 +1301,7 @@
 		B2ACCF7EA9DB65ACAE4217B2 /* licenses */ = {isa = PBXFileReference; lastKnownFileType = folder; name = licenses; path = Sources/AgRoom/EmbeddingRuntime/licenses; sourceTree = SOURCE_ROOT; };
 		B3239F6EFF7F8D3B92082762 /* AIAssistGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAssistGenerator.swift; sourceTree = "<group>"; };
 		B39019A53BC95591B23848A9 /* NoteWorkflowExecution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteWorkflowExecution.swift; sourceTree = "<group>"; };
-		B43CA81940CC6BA84F7DA652 /* llama-embedding */ = {isa = PBXFileReference; path = "llama-embedding"; sourceTree = "<group>"; };
+		B43CA81940CC6BA84F7DA652 /* llama-embedding */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = "llama-embedding"; sourceTree = "<group>"; };
 		B488D5229971C69C2E6C5C2D /* NativeAppSlidingPuzzle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppSlidingPuzzle.swift; sourceTree = "<group>"; };
 		B4C4FA8A92FAE0E9789313A2 /* MeetStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetStyle.swift; sourceTree = "<group>"; };
 		B54A42E703704DACB0AE1CEB /* ToolApprovalPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolApprovalPresentation.swift; sourceTree = "<group>"; };
@@ -1331,7 +1337,7 @@
 		C3947AFEA375CDEFA68A8C6E /* UsageCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageCharts.swift; sourceTree = "<group>"; };
 		C473CED3CE521367BAA752AB /* BrowserInteractionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserInteractionState.swift; sourceTree = "<group>"; };
 		C4E573B9999248D5BA1A2B2C /* WebDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebDocument.swift; sourceTree = "<group>"; };
-		C536056B442E575177CA5FE8 /* AgRoomDaemon */ = {isa = PBXFileReference; includeInIndex = 0; path = AgRoomDaemon; sourceTree = BUILT_PRODUCTS_DIR; };
+		C536056B442E575177CA5FE8 /* AgRoomDaemon */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AgRoomDaemon; sourceTree = BUILT_PRODUCTS_DIR; };
 		C565E1D92879DF269634D7D4 /* MarkdownRichBlock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownRichBlock.swift; sourceTree = "<group>"; };
 		C5A8F34F69C6EA55E09E0B9B /* DaemonMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaemonMain.swift; sourceTree = "<group>"; };
 		C63FC4617ECF31A04EE90CB1 /* MCPServerConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerConfigService.swift; sourceTree = "<group>"; };
@@ -1414,21 +1420,24 @@
 		E196F58649BACE246CF84348 /* ProviderFormHostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderFormHostTests.swift; sourceTree = "<group>"; };
 		E1A8C4068465C25AA3AFC6AC /* ScheduledModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledModels.swift; sourceTree = "<group>"; };
 		E1BAB03FC43BCFA7946570BE /* TaskArtifactVersionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskArtifactVersionTests.swift; sourceTree = "<group>"; };
+		E20DBA60A6AC9AFC781E4F24 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
 		E233A9C6313833248001196A /* TaskArtifactComparison.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskArtifactComparison.swift; sourceTree = "<group>"; };
 		E2B7E9F0E354DFCC5BB1A4FD /* AppNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigationTests.swift; sourceTree = "<group>"; };
 		E2DFEDC159AB9D04F2B901EC /* libggml-blas.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = "libggml-blas.0.dylib"; sourceTree = "<group>"; };
 		E3A90642AC6582C5EA3FF09D /* ProviderUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderUsage.swift; sourceTree = "<group>"; };
 		E40CD5266923206087E04DAE /* NativeAppInstallationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppInstallationTests.swift; sourceTree = "<group>"; };
+		E423DF66FE420C7CF0BBE863 /* ar */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ar; path = ar.lproj/Localizable.strings; sourceTree = "<group>"; };
 		E4AE3BC24FAC8F6D517363DC /* JobIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobIndicatorView.swift; sourceTree = "<group>"; };
 		E5C37A2C7D5BB678C7E9B6CE /* MailTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailTools.swift; sourceTree = "<group>"; };
 		E5D8AC5A43E68FE20A9AA7C4 /* NoteSpeakerRefinement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteSpeakerRefinement.swift; sourceTree = "<group>"; };
 		E695B9C342CDC8FE152FB493 /* SpaceBackupBlobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceBackupBlobs.swift; sourceTree = "<group>"; };
 		E73D7DE4CFA2F473A56C5830 /* TaskArtifactComparisonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskArtifactComparisonTests.swift; sourceTree = "<group>"; };
+		E7D001E1CB130A066215BD50 /* ProductWorkflowImprovementsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductWorkflowImprovementsTests.swift; sourceTree = "<group>"; };
 		E88D3685000C0E703638969A /* TeamModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamModels.swift; sourceTree = "<group>"; };
 		E8A5CC4746BD4DD6DBA12891 /* RemindersService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersService.swift; sourceTree = "<group>"; };
 		E8E8D5FD2545C500F241A4BC /* MCPHTTPTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPHTTPTransport.swift; sourceTree = "<group>"; };
 		E930EB808A1163CB401F5B48 /* katex-fonts-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "katex-fonts-OFL.txt"; sourceTree = "<group>"; };
-		E939E0671C10CFEFD162F76A /* llama-intent */ = {isa = PBXFileReference; path = "llama-intent"; sourceTree = "<group>"; };
+		E939E0671C10CFEFD162F76A /* llama-intent */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = "llama-intent"; sourceTree = "<group>"; };
 		E9622DC72F7C3AB4FD604D51 /* ConversationToolScopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationToolScopeTests.swift; sourceTree = "<group>"; };
 		E98B2ADC8400220715C90D48 /* NoteSpeechExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteSpeechExport.swift; sourceTree = "<group>"; };
 		EA2B11B9F0CC41904CF13576 /* BrowserTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTools.swift; sourceTree = "<group>"; };
@@ -1444,7 +1453,7 @@
 		EE5D175D7B32F9E572D86887 /* SpaceSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceSearchTests.swift; sourceTree = "<group>"; };
 		EE64376E4A48F50E1A1728CC /* ScheduledFileTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledFileTools.swift; sourceTree = "<group>"; };
 		EFD5F54FBDF7D826BFB3041F /* DaemonSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaemonSupport.swift; sourceTree = "<group>"; };
-		F04D6CFA05C2681E8277EE27 /* llama-embedding */ = {isa = PBXFileReference; path = "llama-embedding"; sourceTree = "<group>"; };
+		F04D6CFA05C2681E8277EE27 /* llama-embedding */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = "llama-embedding"; sourceTree = "<group>"; };
 		F0845FED39B97F2E340EA3F6 /* CodingTaskRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodingTaskRuntime.swift; sourceTree = "<group>"; };
 		F092C3C7033578C59843358F /* ChatMCPToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMCPToolsView.swift; sourceTree = "<group>"; };
 		F260CFE13D79D7E1922F7DA8 /* NoteWhisper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteWhisper.swift; sourceTree = "<group>"; };
@@ -1484,6 +1493,7 @@
 		FC6AFFCA91BABDD4EB7402BF /* ScriptAppSandbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptAppSandbox.swift; sourceTree = "<group>"; };
 		FC9CD59C42BA18053C50D2BE /* MailImportResume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailImportResume.swift; sourceTree = "<group>"; };
 		FCFB7F6C34A42E0F3B57E049 /* Skill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skill.swift; sourceTree = "<group>"; };
+		FD35A773675E3AD6CC690F7C /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		FDC42C1050BC625E9F0F1BB8 /* SkillTaskTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillTaskTemplate.swift; sourceTree = "<group>"; };
 		FE23971A0DE6937B0CA4616D /* ChatBrowserPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBrowserPanel.swift; sourceTree = "<group>"; };
 		FE3F6A3E124EE46DF98B0EDD /* PythonExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonExecutor.swift; sourceTree = "<group>"; };
@@ -2108,6 +2118,7 @@
 				834761218907937CF07EE365 /* ProductTaskBackupTests.swift */,
 				F8DDFB0F34C977974E3D2C67 /* ProductTaskCenterHostTests.swift */,
 				0776FEB4484A8EEA32384D05 /* ProductTaskRunTests.swift */,
+				E7D001E1CB130A066215BD50 /* ProductWorkflowImprovementsTests.swift */,
 				2D6CA3DB932BEFA16879E5E8 /* ProductWorkflowTests.swift */,
 				0FC7EB1640CD07A11C25040D /* PromptCachingTests.swift */,
 				90E2B7B07A4A2EB49E41B015 /* ProviderAliasTests.swift */,
@@ -2850,7 +2861,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2720;
 				TargetAttributes = {
 					06529B2C30B4ACA7FF5D75D8 = {
 						ProvisioningStyle = Automatic;
@@ -2868,14 +2879,18 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
+				ar,
 				en,
+				es,
+				fr,
+				ru,
 				"zh-Hans",
 				"zh-Hant",
 			);
 			mainGroup = DFD956BF34480ED77C1D9E54;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				4A3CFE0F164523E398F36E72 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				4A3CFE0F164523E398F36E72 /* XCRemoteSwiftPackageReference "GRDB" */,
 				F4EDCCB57BA1E79B8C9AA1AB /* XCRemoteSwiftPackageReference "MimeFoundation" */,
 				36FBE0520C769AD9EE75127D /* XCRemoteSwiftPackageReference "sherpa-onnx" */,
 				0C8C5891B70795C384B36AAB /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
@@ -3412,6 +3427,7 @@
 				2F2763B383C3797E0EF40E38 /* ProductTaskBackupTests.swift in Sources */,
 				8311A91CD223277D8DB46729 /* ProductTaskCenterHostTests.swift in Sources */,
 				DE82CE9D5AF7D3AA73D226EF /* ProductTaskRunTests.swift in Sources */,
+				693C31024E854FD9558C60B6 /* ProductWorkflowImprovementsTests.swift in Sources */,
 				D504139E7B9011A4E73CA82F /* ProductWorkflowTests.swift in Sources */,
 				F84A49F22E6F92F77766E431 /* PromptCachingTests.swift in Sources */,
 				D9242053B33364DA8B7F519E /* ProviderAliasTests.swift in Sources */,
@@ -3701,7 +3717,11 @@
 		5F5DA2C3C3B452C2679AA9F0 /* InfoPlist.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
+				4F1776E019D10C3B64691FC8 /* ar */,
 				B14593B3C395BF7A25FA9EA0 /* en */,
+				3989FCC663A230FC2EFB93E7 /* es */,
+				FD35A773675E3AD6CC690F7C /* fr */,
+				780DA203A203CE601AD06662 /* ru */,
 				F86A2350FF4F6D6D9404F3CE /* zh-Hans */,
 				781576D4A01E5AF6051C09E7 /* zh-Hant */,
 			);
@@ -3711,7 +3731,11 @@
 		D63038D44AB27E148F8959CF /* Localizable.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
+				E423DF66FE420C7CF0BBE863 /* ar */,
 				889044C9FF1D001C560B1642 /* en */,
+				72038ADD28C2BA95D1D31089 /* es */,
+				53DA14556BC240E6FC4613BB /* fr */,
+				E20DBA60A6AC9AFC781E4F24 /* ru */,
 				489853AD6F330B244B52FBB9 /* zh-Hans */,
 				A0CD55B518AF4C98E40CACD5 /* zh-Hant */,
 			);
@@ -3726,6 +3750,7 @@
 			baseConfigurationReference = 1A1F035A60AF11A27C57D454 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -3757,7 +3782,9 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = B35SN74F9U;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -3782,6 +3809,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -3797,6 +3825,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				EXECUTABLE_NAME = AgRoom;
@@ -3829,6 +3858,7 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -3853,6 +3883,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -3873,6 +3904,7 @@
 			baseConfigurationReference = 1A1F035A60AF11A27C57D454 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -3904,7 +3936,9 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = B35SN74F9U;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -3922,6 +3956,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -3933,6 +3968,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -3949,16 +3985,19 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.agroom.ui;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -3972,16 +4011,19 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -3999,16 +4041,19 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.agroom.ui;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -4025,6 +4070,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -4048,11 +4094,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
+				ENABLE_MODULE_VERIFIER = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.agroom.AgRoomScriptIPC;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -4066,16 +4115,19 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -4091,6 +4143,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -4109,6 +4162,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				EXECUTABLE_NAME = AgRoom;
@@ -4141,6 +4195,7 @@
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -4164,11 +4219,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
+				ENABLE_MODULE_VERIFIER = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.agroom.AgRoomScriptIPC;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -4185,6 +4243,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -4209,6 +4268,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -4366,7 +4426,7 @@
 				revision = 1cb484af5e69d3c7803c1eb0b3b5ab8041e0e911;
 			};
 		};
-		4A3CFE0F164523E398F36E72 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+		4A3CFE0F164523E398F36E72 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -4417,7 +4477,7 @@
 		};
 		87B65C5CC0CA79B9EE7E3CB1 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4A3CFE0F164523E398F36E72 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = 4A3CFE0F164523E398F36E72 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 		A3BA5386653A98992119B001 /* sherpa-onnx */ = {
@@ -4442,7 +4502,7 @@
 		};
 		DAF1F1E174997B2B04FDCCAC /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4A3CFE0F164523E398F36E72 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = 4A3CFE0F164523E398F36E72 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 		E9256613BBB44C9BFA824C54 /* Logging */ = {

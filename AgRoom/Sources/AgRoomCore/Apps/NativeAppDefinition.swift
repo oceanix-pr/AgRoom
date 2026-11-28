@@ -270,10 +270,12 @@ public struct NativeAppDefinition: Codable, Equatable, Sendable, Identifiable {
         try require((480...1600).contains(manifest.width ?? 800), "manifest.width")
         try require((360...1200).contains(manifest.height ?? 600), "manifest.height")
         try require(!manifest.icon.isEmpty && manifest.icon.utf8.count <= 80, "manifest.icon")
-        try require(Set(i18n.keys) == ["en", "zh-Hans", "zh-Hant"], "i18n")
+        let requiredLanguages: Set<String> = ["en", "zh-Hans", "zh-Hant"]
+        let supportedLanguages: Set<String> = requiredLanguages.union(["es", "fr", "ar", "ru"])
+        try require(requiredLanguages.isSubset(of: Set(i18n.keys)) && Set(i18n.keys).isSubset(of: supportedLanguages), "i18n")
         try require(state.count <= 32 && dataSources.count <= 8 && actions.count <= 32, "state/dataSources/actions")
         func label(_ key: String) throws {
-            for language in ["en", "zh-Hans", "zh-Hant"] {
+            for language in i18n.keys {
                 try require(!(i18n[language]?[key]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true), "i18n.\(language).\(key)")
             }
         }

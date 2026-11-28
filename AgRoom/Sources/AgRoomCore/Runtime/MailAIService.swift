@@ -15,6 +15,7 @@ public enum MailAILanguage: String, Sendable, CaseIterable {
     case simplifiedChinese
     case traditionalChinese
     case english
+    case spanish, french, arabic, russian
 
     /// 提示词里的语言指令（面向模型，不做 UI 本地化）。
     var instruction: String? {
@@ -23,6 +24,10 @@ public enum MailAILanguage: String, Sendable, CaseIterable {
         case .simplifiedChinese: return "Write the mail in Simplified Chinese."
         case .traditionalChinese: return "Write the mail in Traditional Chinese."
         case .english: return "Write the mail in English."
+        case .spanish: return "Write the mail in Spanish."
+        case .french: return "Write the mail in French."
+        case .arabic: return "Write the mail in Arabic."
+        case .russian: return "Write the mail in Russian."
         }
     }
 }

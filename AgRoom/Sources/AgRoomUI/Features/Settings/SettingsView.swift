@@ -315,7 +315,7 @@ public struct SettingsView: View {
             }
             .padding(12)
         }
-        .frame(width: languageManager.activeLanguageCode == "en" ? 230 : 180)
+        .frame(width: languageManager.usesCompactLabels ? 180 : 250)
         .background(Color(nsColor: .controlBackgroundColor))
         .accessibilityLabel(L.string("settings.categories"))
     }
@@ -378,7 +378,7 @@ public struct SettingsView: View {
                     set: { languageManager.currentLanguage = $0 }
                 )) {
                     ForEach(AppLanguage.allCases, id: \.self) { lang in
-                        Text(lang.nativeDisplayName).tag(lang)
+                        Text(lang == .system ? L.string("settings.appearance.system") : lang.nativeDisplayName).tag(lang)
                     }
                 }
                 .pickerStyle(.menu)
@@ -821,7 +821,7 @@ public struct SettingsView: View {
                 .foregroundColor(.secondary)
             Picker(L.format("settings.agent_language", L.dispatcherName()), selection: $agentReplyLanguage) {
                 Text(L.string("settings.agent_language.system")).tag(AppLanguage.system)
-                ForEach([AppLanguage.simplifiedChinese, .traditionalChinese, .english], id: \.self) { lang in
+                ForEach(AppLanguage.allCases.filter { $0 != .system }, id: \.self) { lang in
                     Text(lang.nativeDisplayName).tag(lang)
                 }
             }

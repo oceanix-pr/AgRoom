@@ -175,7 +175,7 @@ public struct SpaceSearchService: Sendable {
                     var arguments: [DatabaseValue] = [query.databaseValue]
                     var cursor = ""
                     if let before {
-                        cursor = "WHERE rank < ? OR (rank=? AND (modifiedAt < ? OR (modifiedAt=? AND itemKey > ?)))"
+                        cursor = "AND (rank < ? OR (rank=? AND (modifiedAt < ? OR (modifiedAt=? AND itemKey > ?))))"
                         arguments += [before.rank.databaseValue, before.rank.databaseValue, before.modifiedAt.databaseValue,
                             before.modifiedAt.databaseValue, before.id.databaseValue]
                     }
@@ -185,10 +185,18 @@ public struct SpaceSearchService: Sendable {
                           SELECT kind,id,substr(title,1,240) AS title,
                             substr(body,max(1,instr(lower(body),lower(q))-100),480) AS snippet,
                             modifiedAt,parentID,secondaryID,isEnabled,kind || ':' || id AS itemKey,
+                            instr(lower(body),lower(q))>0 AS bodyMatches,
                             CASE WHEN lower(title)=lower(q) THEN 3 WHEN instr(lower(title),lower(q))=1 THEN 2
                               WHEN instr(lower(title),lower(q))>0 THEN 1 ELSE 0 END AS rank
                           FROM source,needle WHERE instr(lower(title),lower(q))>0 OR instr(lower(body),lower(q))>0
-                        ) SELECT * FROM matches \(cursor) ORDER BY rank DESC,modifiedAt DESC,itemKey ASC LIMIT ?
+                        ), grouped AS (
+                          SELECT *,row_number() OVER (
+                            PARTITION BY CASE WHEN kind='conversation' AND bodyMatches=0
+                              THEN kind || ':' || parentID ELSE itemKey END
+                            ORDER BY modifiedAt DESC,itemKey ASC
+                          ) AS matchNumber FROM matches
+                        ) SELECT * FROM grouped WHERE matchNumber=1 \(cursor)
+                          ORDER BY rank DESC,modifiedAt DESC,itemKey ASC LIMIT ?
                         """, arguments: StatementArguments(arguments)).map { row in
                             let document = try Self.document(row, body: "snippet")
                             return SpaceSearchHit(space: space, kind: document.kind, sourceID: document.id, title: document.title,
@@ -243,7 +251,7 @@ public struct SpaceSearchService: Sendable {
         case .agent:
             return select("id", "CASE WHEN nickname<>'' THEN nickname ELSE name END", "name || char(10) || description", "updatedAt", from: "agents", enabled: "isEnabled")
         case .mail:
-            return select("m.id", "m.subject", "m.fromName || ' ' || m.fromAddress || char(10) || m.snippet || char(10) || COALESCE(b.textBody,'')",
+            return select("m.id", "m.subject", "m.fromName || ' ' || m.fromAddress || char(10) || m.snippet || char(10) || COALESCE(b.textBody,'') || char(10) || COALESCE(b.searchText,'')",
                 "COALESCE(m.date,'1970-01-01 00:00:00.000')", from: "mail_messages m LEFT JOIN mail_bodies b ON b.messageId=m.id", parent: "m.accountId", secondary: "m.folderId")
         case .artifact:
             return select("a.id", "a.logicalPath", "a.path", "a.createdAt", from: "artifact_versions a LEFT JOIN chat_sessions s ON s.id=a.sessionID",

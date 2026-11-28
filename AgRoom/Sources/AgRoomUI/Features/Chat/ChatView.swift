@@ -113,7 +113,7 @@ struct TracePanelContent {
 /// 模型可能忽略提示或耗尽输出预算，因此落盘前检查语言和长度。
 enum ConversationTitle {
     static func isPlaceholder(_ title: String) -> Bool {
-        ["", "新对话", "新對談", "新對話", "New Chat"].contains(title.trimmingCharacters(in: .whitespacesAndNewlines))
+        ["", "新对话", "新對談", "新對話", "New Chat", "Nuevo chat", "Nouvelle discussion", "محادثة جديدة", "Новый чат"].contains(title.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     static func fallback(question: String) -> String {
@@ -128,7 +128,8 @@ enum ConversationTitle {
         case "zh-Hant":
             instruction = "Write in Traditional Chinese. Use no more than 12 Chinese characters."
         default:
-            instruction = "Write in English. Use no more than 6 words."
+            let language = (AppLanguage(rawValue: languageCode) ?? .english).agentReplyLanguageName
+            instruction = "Write in \(language). Use no more than 6 words."
         }
         return """
         Summarize the conversation as one short, specific title. \(instruction)
@@ -1832,6 +1833,29 @@ final class ChatViewModel: MenuBarActivitySource {
               pendingGoalReceipts[goal.sessionID] == nil, let coordinator = goalCoordinator else { return }
         do { goalsBySession[goal.sessionID] = try await coordinator.review(goal, passedIDs: passedIDs) }
         catch { errorMessage = L.errorDescription(error) }
+    }
+
+    @discardableResult
+    func openGoalResult(_ goal: ExecutionGoal) async -> Bool {
+        guard goal.space == space, hub.spaceStore.current == space, activeSessionId == goal.sessionID,
+              let runID = goal.latestRunID else { return false }
+        do {
+            let messageID: UUID?
+            if let message = session(id: goal.sessionID)?.messages.last(where: {
+                $0.taskRun?.id == runID || $0.variations?.contains(where: { $0.taskRun?.id == runID }) == true
+            }) {
+                messageID = message.id
+            } else {
+                let saved = try await hub.makeTaskRunStore(for: space)?.run(id: runID)
+                messageID = saved?.sessionID == goal.sessionID ? saved?.messageID : nil
+            }
+            guard hub.spaceStore.current == space, activeSessionId == goal.sessionID else { return false }
+            guard let messageID else { errorMessage = L.string("product.tasks.source_unavailable"); return false }
+            return await openTaskSource(sessionID: goal.sessionID, messageID: messageID)
+        } catch {
+            errorMessage = L.actionableError(error, fallbackKey: "product.tasks.source_unavailable")
+            return false
+        }
     }
 
     func retryGoalSave() async {
@@ -6797,7 +6821,8 @@ public struct ChatView: View {
                             onCancel: { Task { await viewModel.stopGoal(goal, cancel: true) } },
                             onResume: { goalEditor = .init(sessionID: session.id, definition: goal.definition, existing: goal) },
                             onReview: { ids in Task { await viewModel.reviewGoal(goal, passedIDs: ids) } },
-                            onRetrySave: { Task { await viewModel.retryGoalSave() } })
+                            onRetrySave: { Task { await viewModel.retryGoalSave() } },
+                            onOpenResult: { Task { await viewModel.openGoalResult(goal) } })
                     }
                     messageList(session: session, proxy: proxy)
                 } else {
@@ -7284,9 +7309,9 @@ public struct ChatView: View {
     }
 
     private struct KnowledgeSourceTarget: Identifiable {
-        let item: KnowledgeItem
+        let item: KnowledgeItem?
         let citation: KnowledgeCitation
-        var id: UUID { item.id }
+        var id: String { citation.id }
     }
 
     @ViewBuilder
@@ -7337,7 +7362,8 @@ public struct ChatView: View {
                     Button(citation.title + " · " + L.format("product.knowledge.passage", citation.passage)) {
                         let service = hub.makeKnowledgeService(for: viewModel.space)
                         Task {
-                            if let item = try? await service?.get(id: citation.itemID) {
+                            let item = try? await service?.get(id: citation.itemID)
+                            if item != nil || citation.excerpt != nil {
                                 knowledgeSource = KnowledgeSourceTarget(item: item, citation: citation)
                             } else { viewModel.errorMessage = L.string("product.knowledge.missing") }
                         }

@@ -350,6 +350,8 @@ struct AgRoom: App {
         Window(L.string("app.name"), id: "agroom.main") {
             RootView(hub: hub)
                 .environment(languageManager)
+                .environment(\.locale, Locale(identifier: languageManager.activeLanguageCode))
+                .environment(\.layoutDirection, languageManager.layoutDirection)
                 .id(languageManager.version)
                 .background(MainWindowConfiguration())
                 .background(MainWindowRegistration(appDelegate: appDelegate))

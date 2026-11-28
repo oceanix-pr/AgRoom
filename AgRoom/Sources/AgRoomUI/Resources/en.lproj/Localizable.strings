@@ -1745,19 +1745,19 @@
 "help.open_settings" = "Open Settings";
 "help.quickstart" = "Quick Start";
 "help.quickstart.1.title" = "Connect a model provider";
-"help.quickstart.1.desc" = "Add a provider and API key under Settings → Model Services. Nothing can be answered before a model is configured.";
+"help.quickstart.1.desc" = "Add and enable a provider under Settings → Model Services, then test its endpoint, model and API key.";
 "help.quickstart.2.title" = "Choose a space";
 "help.quickstart.2.desc" = "Life and Work keep separate databases. Pick one at the top of the sidebar; conversations, files, skills and memory never cross over.";
 "help.quickstart.3.title" = "Talk to %@";
-"help.quickstart.3.desc" = "%@ reads your intent and routes the task to sub-agents and built-in tools. Risky tool calls pause for your confirmation in the chat.";
+"help.quickstart.3.desc" = "Describe your task to %@. Inspect tool progress and review operations when confirmation appears.";
 "help.quickstart.4.title" = "Extend it with skills";
 "help.quickstart.4.desc" = "Skills are SKILL.md packages that can be loaded on demand. Import an existing one, or describe what it should do in the chat and let the agent draft it.";
 "help.tour" = "Feature Tour";
-"help.tour.chat" = "Chat with the dispatcher, preview images, play video and audio attachments, and inspect tool calls in the trace panel.";
+"help.tour.chat" = "Describe a task, set a goal, inspect tool activity and use saved result versions. Knowledge references open the excerpts saved with the answer.";
 "help.tour.mail" = "Three-column mail client: mailbox and folders, message list, message detail. Compose and reply in a separate window.";
 "help.tour.agents" = "Configure delegated specialists and team workers, with their own provider, model, persona and skills.";
-"help.tour.team" = "Multi-agent task board: plans, subtasks, verification notes and artifacts, plus an approval inbox for file writes.";
-"help.tour.scheduled" = "Scheduled agent tasks with trigger rules, next run, instructions and run history.";
+"help.tour.team" = "Review plans, subtasks, verification and file changes. Retry read-only tasks in their original recorded workspace.";
+"help.tour.scheduled" = "Set read-only scheduled tasks while AgRoom is running. Review triggers, next runs, missed or skipped occurrences, results and follow-up actions.";
 "help.tour.tools" = "Skill packages in SKILL.md format: import, edit, enable, export.";
 "help.tour.files" = "Manage files and folders in the current space, with previews, copying, import and export.";
 "help.tour.knowledge" = "Libraries, folders and documents with full-text search, file import and AI-generated knowledge.";
@@ -4143,7 +4143,7 @@
 
 // Notes
 "nav.notes" = "Notes";
-"help.tour.notes" = "Notes, recordings, transcripts, summaries and action items.";
+"help.tour.notes" = "Record, transcribe and summarize notes, extract action items, and review their source evidence and deadlines.";
 "notes.new" = "New";
 "notes.archived" = "Archived";
 "notes.more" = "Load more";
@@ -4676,3 +4676,35 @@
 "browser.sleep" = "Put Tab to Sleep";
 "browser.sleep.warning" = "This closes the page and discards unsaved form entries and its navigation history. Waking the tab opens the saved address again.";
 "browser.wake" = "Wake Tab";
+
+"product.knowledge.snapshot" = "Excerpt saved with this answer";
+"product.knowledge.current" = "Current document";
+"goal.result" = "View this segment's result";
+"team.retry.workspace" = "Workspace: %@";
+"team.retry.legacy" = "Open the original conversation to run this task again with its project files.";
+"skills.error.resources_too_large" = "These skill resources exceed the rewrite size limit. Edit the relevant files in the skill editor.";
+"help.firstUse" = "First Use Guide";
+"help.firstUse.1.title" = "Choose Life or Work";
+"help.firstUse.1.desc" = "Choose a space at the top of the sidebar. Your conversations, knowledge, notes and skills are saved in that space.";
+"help.firstUse.2.title" = "Connect and test a model";
+"help.firstUse.2.desc" = "Open Settings → Model Services. Add the provider endpoint, model ID and API key, enable the provider, then test the connection. A successful test enables the first task.";
+"help.firstUse.3.title" = "Prepare a small source";
+"help.firstUse.3.desc" = "Start with the sample in the first-task guide, or attach a short text file. For a comparison, select at least two files. You can add files from different folders in separate selections.";
+"help.firstUse.4.title" = "Run and review each operation";
+"help.firstUse.4.desc" = "Choose Organize, Compare or Mail Summary. Check the model and sources, then start. When an operation asks for confirmation, review its target and proposed changes before approving.";
+"help.firstUse.5.title" = "Open and check the result";
+"help.firstUse.5.desc" = "Open the report from its result card and compare it with your source. Use the first-result check after reviewing it. The card also supports export and continued editing.";
+"help.firstUse.6.title" = "Find the work again";
+"help.firstUse.6.desc" = "Use Task Center to review runs, Artifact Library to reopen reports, and ⌘K to search this space. For a mail summary, configure and sync the mailbox when prompted; the guide resumes after mail is available.";
+"help.faq.citations.title" = "How do I check an answer's knowledge sources?";
+"help.faq.citations.desc" = "Expand Knowledge Sources below the answer and open a passage. New answers retain the excerpt used at the time. Current Document opens the latest text.";
+"help.faq.retry.title" = "Which project does a collaboration retry use?";
+"help.faq.retry.desc" = "The retry confirmation shows the original workspace. Retrying uses its recorded folders and knowledge scope. For older tasks without project details, open the original conversation and run them again.";
+"help.faq.todos.title" = "What happens when I extract action items again?";
+"help.faq.todos.desc" = "Existing matching items retain your edits, completion and reminder links. Relative deadlines use the recorded event date. When that date is unknown, the source wording stays available for review.";
+"help.faq.goal.title" = "How do I accept a goal result?";
+"help.faq.goal.desc" = "At Awaiting Review, the goal card expands its checklist. Open the segment result, mark the criteria you checked, and save the review. Continue starts another execution segment.";
+"help.faq.schedule.title" = "How do I read scheduled-run statuses?";
+"help.faq.schedule.desc" = "Missed means the catch-up window passed. Skipped means an earlier run was still active. Cancelled means a stop was requested. Failed means execution ended with an error. Keep AgRoom running for scheduled tasks.";
+
+"product.setup.sources.remove" = "Remove this source";
